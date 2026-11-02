@@ -3,8 +3,7 @@
 @section('heading', 'Dashboard')
 @section('content')
 <section class="dashboard-welcome">
-    <div class="welcome-copy"><span class="welcome-accent"></span><div><p class="eyebrow">PhilCST ID Monitoring &amp; Issuance</p><h1>Welcome back, {{ $firstName }}</h1><p>Monitor student IDs, imports, printing, releasing, and scan activity from one place.</p></div></div>
-    <div class="dashboard-date"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v3m10-3v3M4 9h16M5 5h14a1 1 0 0 1 1 1v13H4V6a1 1 0 0 1 1-1Z"/></svg><span id="dashboardClock">{{ now()->format('M j, Y, g:i:s A') }}</span></div>
+    <div class="welcome-copy"><span class="welcome-accent"></span><div><p class="eyebrow">PhilCST ID Monitoring &amp; Issuance</p><h1>Welcome back, PhilCST</h1><p>Monitor student IDs, imports, printing, releasing, and scan activity from one place.</p></div></div>
     <div class="decorative-id-card" aria-hidden="true"><img class="mini-id-logo" src="{{ asset('images/philcst-seal.png') }}" alt=""><small>PHILCST IDMS</small><strong>STUDENT ID</strong><span class="mini-id-photo"></span><span class="mini-id-lines"></span><span class="mini-qr">▦</span></div>
 </section>
 
@@ -22,4 +21,3 @@
 
 <section class="quick-actions"><div><h2><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m13 2-2 7H5l6 4-2 9 2-7h6l-6-4 2-9Z"/></svg>Quick Actions</h2><p>Common operational tasks</p></div><div class="quick-action-buttons">@if(auth()->user()->hasPermission('imports.manage'))<a class="quick-action" href="{{ route('imports.students.create') }}"><span>↑</span>Import CSV</a>@else<span class="quick-action disabled" aria-disabled="true"><span>↑</span>Import CSV</span>@endif<span class="quick-action disabled" aria-disabled="true" title="QR scanner station is not configured yet"><span>▦</span>Open Scanner</span><span class="quick-action disabled" aria-disabled="true" title="Reports module is not available yet"><span>▥</span>View Reports</span></div></section>
 @endsection
-@push('scripts')<script>const clock=document.getElementById('dashboardClock');const tick=()=>{if(clock)clock.textContent=new Intl.DateTimeFormat('en-PH',{dateStyle:'medium',timeStyle:'medium',timeZone:'Asia/Manila'}).format(new Date())};tick();setInterval(tick,1000);</script>@endpush

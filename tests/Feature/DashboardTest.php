@@ -24,7 +24,7 @@ class DashboardTest extends TestCase
 
         $this->actingAs($user)->get('/')
             ->assertOk()
-            ->assertSee('Welcome back, Ana')
+            ->assertSee('Welcome back, PhilCST')
             ->assertSee('Total Students')
             ->assertSee('Pending Printing')
             ->assertSee('Ready for Release')
