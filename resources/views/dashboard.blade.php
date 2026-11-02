@@ -2,11 +2,6 @@
 @section('title', 'Dashboard')
 @section('heading', 'Dashboard')
 @section('content')
-<section class="dashboard-welcome">
-    <div class="welcome-copy"><span class="welcome-accent"></span><div><p class="eyebrow">PhilCST ID Monitoring &amp; Issuance</p><h1>Welcome back, PhilCST</h1><p>Monitor student IDs, imports, printing, releasing, and scan activity from one place.</p></div></div>
-    <div class="decorative-id-card" aria-hidden="true"><img class="mini-id-logo" src="{{ asset('images/philcst-seal.png') }}" alt=""><small>PHILCST IDMS</small><strong>STUDENT ID</strong><span class="mini-id-photo"></span><span class="mini-id-lines"></span><span class="mini-qr">▦</span></div>
-</section>
-
 <section class="dashboard-stat-grid" aria-label="IDMS summary metrics">
     <article class="dashboard-stat stat-violet"><div class="stat-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 20v-1.5a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4V20m6-9a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm7-6a3 3 0 0 1 0 6m4 9v-1.5a4 4 0 0 0-3-3.87"/></svg></div><div><span>Total Students</span><strong>{{ number_format($totalStudents) }}</strong></div></article>
     <article class="dashboard-stat stat-orange"><div class="stat-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v7H6v-7Zm12-5h.01"/></svg></div><div><span>Pending Printing</span><strong>{{ number_format($pendingPrinting) }}</strong></div></article>
