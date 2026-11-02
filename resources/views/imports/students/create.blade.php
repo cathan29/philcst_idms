@@ -1,0 +1,10 @@
+@extends('layouts.app')
+@section('title', 'Import Students')
+@section('heading', 'Import Students')
+@section('content')
+<div class="page-header"><div><p class="eyebrow">Student Management</p><h2>Import Students</h2><p class="page-description">Upload the official student CSV, review the records, then confirm the import.</p></div><a class="btn secondary" href="{{ route('students.index') }}">Back to Registry</a></div>
+<section class="import-steps"><div class="import-step active"><b>1</b><span>Upload CSV</span></div><div class="import-step"><b>2</b><span>Review &amp; validate</span></div><div class="import-step"><b>3</b><span>Confirm import</span></div></section>
+<section class="panel import-card"><div class="panel-heading"><div><h2>Upload official student data</h2><p>CSV or TXT files only · Maximum file size: 10 MB</p></div><a class="text-action" href="{{ route('imports.students.template') }}">Download template</a></div><form action="{{ route('imports.students.preview') }}" method="POST" enctype="multipart/form-data" class="import-upload">@csrf @if($errors->any())<div class="auth-alert" role="alert">{{ $errors->first() }}</div>@endif<label class="csv-dropzone" for="csv"><span class="upload-icon">↑</span><strong>Choose a CSV file</strong><span>or drag and drop it here</span><small id="fileName">Required columns: student_number, first_name, last_name</small><input id="csv" type="file" name="csv" accept=".csv,.txt,text/csv,text/plain" required></label><button class="btn primary" type="submit">Continue to preview</button></form></section>
+<section class="import-guidance"><strong>Before you upload</strong><span>Keep student numbers as text to preserve leading zeroes. Existing cards and issuance history are never deleted or reset by an import.</span></section>
+@endsection
+@push('scripts')<script>document.getElementById('csv')?.addEventListener('change',e=>{document.getElementById('fileName').textContent=e.target.files[0]?.name||'Required columns: student_number, first_name, last_name'});</script>@endpush

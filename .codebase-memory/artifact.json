@@ -1,0 +1,11 @@
+{
+    "schema_version": 2,
+    "commit": "",
+    "indexed_at": "2026-11-02T08:21:57Z",
+    "project": "id-monitoring-system",
+    "nodes": 655,
+    "edges": 1028,
+    "original_size": 2555904,
+    "compressed_size": 271730,
+    "compression_level": 3
+}
