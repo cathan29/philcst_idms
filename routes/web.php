@@ -26,7 +26,13 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::middleware('permission:imports.manage')->group(function () {
         Route::get('/imports/students', [StudentImportController::class, 'create'])->name('imports.students.create');
         Route::post('/imports/students/preview', [StudentImportController::class, 'preview'])->name('imports.students.preview');
+        Route::get('/imports/students/mapping', [StudentImportController::class, 'mapping'])->name('imports.students.mapping');
+        Route::post('/imports/students/validate', [StudentImportController::class, 'validateMapping'])->name('imports.students.validate');
+        Route::get('/imports/students/review', [StudentImportController::class, 'review'])->name('imports.students.review');
+        Route::post('/imports/students/confirm', [StudentImportController::class, 'confirm'])->name('imports.students.confirm');
         Route::post('/imports/students/commit', [StudentImportController::class, 'commit'])->name('imports.students.commit');
+        Route::get('/imports/students/results/{batch}', [StudentImportController::class, 'results'])->name('imports.students.results');
+        Route::get('/imports/students/results/{batch}/errors', [StudentImportController::class, 'errors'])->name('imports.students.errors');
     });
     Route::middleware('permission:students.view')->group(function () {
         Route::get('/students', [StudentController::class, 'index'])->name('students.index');

@@ -39,7 +39,7 @@
         <button class="mobile-sidebar-backdrop" id="sidebarBackdrop" type="button" aria-label="Close navigation"></button>
         <main class="main">
             <button class="mobile-menu-button" id="mobileMenuButton" type="button" aria-controls="appSidebar" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg><span class="sr-only">Open navigation</span></button>
-            @if(!request()->routeIs('dashboard', 'students.index'))
+            @if(!request()->routeIs('dashboard', 'students.index', 'imports.*'))
                 <header class="topbar"><div><p class="eyebrow">PhilCST ID Monitoring &amp; Issuance</p><h1>@yield('heading', 'Dashboard')</h1></div><div class="live-clock" id="liveClock"></div></header>
             @endif
             <div class="content">
@@ -48,7 +48,7 @@
             </div>
         </main>
     </div>
-    @if(!request()->routeIs('dashboard', 'students.index'))<script>const clock=document.getElementById('liveClock');const tick=()=>{if(clock)clock.textContent=new Intl.DateTimeFormat('en-PH',{dateStyle:'medium',timeStyle:'medium',timeZone:'Asia/Manila'}).format(new Date())};tick();setInterval(tick,1000);</script>@endif
+    @if(!request()->routeIs('dashboard', 'students.index', 'imports.*'))<script>const clock=document.getElementById('liveClock');const tick=()=>{if(clock)clock.textContent=new Intl.DateTimeFormat('en-PH',{dateStyle:'medium',timeStyle:'medium',timeZone:'Asia/Manila'}).format(new Date())};tick();setInterval(tick,1000);</script>@endif
     @stack('scripts')
     <script>
         (() => {

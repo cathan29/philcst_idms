@@ -13,6 +13,6 @@ class StudentImportRequest extends FormRequest
 
     public function rules(): array
     {
-        return ['csv' => ['required', 'file', 'extensions:csv,txt', 'mimes:csv,txt', 'max:10240']];
+        return ['csv' => ['required', 'file', 'extensions:csv', 'mimetypes:text/csv,text/plain,application/csv,application/vnd.ms-excel', 'max:10240']];
     }
 }
