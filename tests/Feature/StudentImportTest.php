@@ -33,6 +33,90 @@ class StudentImportTest extends TestCase
         ])->assertSessionHasErrors(['academic_term_id', 'coverage', 'csv']);
     }
 
+    public function test_wizard_steps_cannot_be_skipped_without_server_validated_state(): void
+    {
+        $user = $this->userWith('imports.manage');
+
+        $this->actingAs($user)->get('/imports/students/mapping')->assertRedirect('/imports/students');
+        $this->actingAs($user)->get('/imports/students/review')->assertRedirect('/imports/students/mapping');
+        $this->actingAs($user)->post('/imports/students/confirm', ['mode' => 'insert_only'])->assertRedirect('/imports/students/mapping');
+        $this->actingAs($user)->post('/imports/students/commit', ['mode' => 'insert_only', 'confirmation_token' => 'manipulated'])->assertStatus(419);
+    }
+
+    public function test_step_one_renders_context_controls_and_client_side_gating(): void
+    {
+        [, $year, $active] = $this->context();
+        AcademicTerm::create(['academic_year_id' => $year->id, 'code' => 'historical', 'name' => 'Second Semester', 'status' => 'closed']);
+        $user = $this->userWith('imports.manage');
+
+        $this->actingAs($user)->get('/imports/students')->assertOk()
+            ->assertSee('Academic Context')
+            ->assertSee('All Programs in CSV')
+            ->assertSee('Single Program')
+            ->assertSee('AY 2026–2027 · First Semester')
+            ->assertSee('Historical terms — authorized imports')
+            ->assertSee('program.disabled = !single', false)
+            ->assertSee('program.required = single', false)
+            ->assertSee('continueButton.disabled = !(', false)
+            ->assertSee('id="continueButton" disabled', false);
+
+        $this->assertSame('active', $active->status);
+    }
+
+    public function test_missing_term_missing_file_and_unsupported_file_are_rejected(): void
+    {
+        [, , $term] = $this->context();
+        $user = $this->userWith('imports.manage');
+
+        $this->actingAs($user)->post('/imports/students/preview', ['coverage' => 'all'])
+            ->assertSessionHasErrors(['academic_term_id', 'csv']);
+        $this->actingAs($user)->post('/imports/students/preview', [
+            'academic_term_id' => $term->id,
+            'coverage' => 'all',
+            'csv' => UploadedFile::fake()->createWithContent('students.xlsx', 'not a csv'),
+        ])->assertSessionHasErrors('csv');
+    }
+
+    public function test_oversized_csv_is_rejected_by_configured_limit(): void
+    {
+        [, , $term] = $this->context();
+        $user = $this->userWith('imports.manage');
+
+        $this->actingAs($user)->post('/imports/students/preview', [
+            'academic_term_id' => $term->id,
+            'coverage' => 'all',
+            'csv' => UploadedFile::fake()->create('oversized.csv', config('idms.import_max_kilobytes') + 1, 'text/csv'),
+        ])->assertSessionHasErrors('csv');
+    }
+
+    public function test_single_program_requires_selection_and_rejects_mismatched_csv_program(): void
+    {
+        [$program, , $term] = $this->context();
+        $other = Program::create(['code' => 'BSBA', 'name' => 'Business Administration']);
+        $user = $this->userWith('imports.manage');
+        $file = $this->csv("00061,Mismatch,Student,{$other->code},1st Year,A");
+
+        $this->actingAs($user)->post('/imports/students/preview', [
+            'academic_term_id' => $term->id, 'coverage' => 'specific', 'csv' => $file,
+        ])->assertSessionHasErrors('coverage_program_id');
+
+        $file = $this->csv("00061,Mismatch,Student,{$other->code},1st Year,A");
+        $this->upload($user, $file, $term, $program)->assertOk();
+        $this->validateMapping($user)->assertOk()->assertSee('program conflicts with selected coverage');
+        $this->assertDatabaseCount('students', 0);
+    }
+
+    public function test_authorized_historical_term_can_be_previewed(): void
+    {
+        [$program, $year] = $this->context();
+        $historical = AcademicTerm::create(['academic_year_id' => $year->id, 'code' => 'historical_second', 'name' => 'Second Semester', 'status' => 'closed']);
+        $user = $this->userWith('imports.manage');
+
+        $this->upload($user, $this->csv("00062,Historical,Student,{$program->code},1st Year,A"), $historical)
+            ->assertOk()->assertSee('Map Columns');
+        $this->assertDatabaseCount('students', 0);
+    }
+
     public function test_preview_is_term_aware_and_does_not_write_students(): void
     {
         [$program, , $term] = $this->context();

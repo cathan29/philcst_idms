@@ -20,7 +20,7 @@ class StudentImportController extends Controller
 {
     public function create(): View
     {
-        return view('imports.students.create', ['terms' => AcademicTerm::with('academicYear')->where('status', 'active')->orderByDesc('id')->get(), 'programs' => Program::where('is_active', true)->orderBy('code')->get(), 'maxMegabytes' => config('idms.import_max_kilobytes', 25600) / 1024]);
+        return view('imports.students.create', ['terms' => AcademicTerm::with('academicYear')->orderByRaw("CASE WHEN status = 'active' THEN 0 ELSE 1 END")->orderByDesc('id')->get(), 'programs' => Program::where('is_active', true)->orderBy('code')->get(), 'maxMegabytes' => config('idms.import_max_kilobytes', 25600) / 1024]);
     }
 
     public function preview(StudentImportRequest $request, StudentCsvImportService $service): View|RedirectResponse
@@ -121,6 +121,6 @@ class StudentImportController extends Controller
 
     public function template(): Response
     {
-        return response("student_number,first_name,middle_name,last_name,suffix,program,year_level,section,academic_year,semester\n00000001,Juan,,Dela Cruz,,BSIT,1st Year,A,2026-2027,First Semester\n",200,['Content-Type' => 'text/csv; charset=UTF-8', 'Content-Disposition' => 'attachment; filename="philcst-enrollment-template.csv"']);
+        return response("student_number,first_name,middle_name,last_name,suffix,program,year_level,section,academic_year,semester\n00000001,Juan,,Dela Cruz,,BSIT,1st Year,A,2026-2027,First Semester\n", 200, ['Content-Type' => 'text/csv; charset=UTF-8', 'Content-Disposition' => 'attachment; filename="philcst-enrollment-template.csv"']);
     }
 }

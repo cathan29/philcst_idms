@@ -160,7 +160,7 @@ class StudentCsvImportService
             foreach (self::FIELDS as $field) {
                 $row[$field] = isset($mapping[$field]) ? trim((string) ($values[$mapping[$field]] ?? '')) : '';
             }$row['status'] = $row['status'] ?: 'active';
-            if ($coverageProgram) {
+            if ($coverageProgram && blank($row['program'])) {
                 $row['program'] = $coverageProgram->code;
             }$rowErrors = count($values) === count($header) ? [] : ['row has a different number of columns than the header'];
             foreach (['student_number', 'first_name', 'last_name', 'program', 'year_level'] as $required) {
@@ -231,8 +231,6 @@ class StudentCsvImportService
         $term = AcademicTerm::with('academicYear')->whereKey($context['academic_term_id'] ?? null)->first();
         if (! $term) {
             throw new RuntimeException('Select a valid academic term.');
-        }if ($term->status !== 'active') {
-            throw new RuntimeException('The selected academic term is closed.');
         }
 
         return $term;
