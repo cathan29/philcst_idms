@@ -158,3 +158,68 @@ input,select{width:100%;border:1px solid #cdd8da;background:white;border-radius:
 }
 .dashboard-welcome{justify-content:flex-start}
 .dashboard-welcome .decorative-id-card{margin-left:auto;margin-top:0}
+
+/* Student registry workflow refinement */
+.registry-page-header{align-items:center;margin:2px 0 20px}
+.registry-page-header h1{margin:5px 0;color:#1f2937;font:800 30px/1.15 'Manrope';letter-spacing:-.025em}
+.registry-page-header .page-description{color:#64748b}
+.registry-page-header .btn.primary,.registry-onboarding .btn.primary,.registry-filters .btn.primary{border-color:#51267a;background:#51267a;color:#fff;box-shadow:0 5px 12px rgba(81,38,122,.16)}
+.registry-page-header .btn.primary:hover,.registry-onboarding .btn.primary:hover,.registry-filters .btn.primary:hover{background:#351653}
+.registry-metrics{gap:12px;margin-bottom:18px}
+.registry-metric{display:flex;align-items:center;gap:14px;min-height:106px;padding:17px 18px;border-color:#e5e7eb;box-shadow:0 5px 15px rgba(53,22,83,.04)}
+.registry-metric-icon{width:42px;height:42px;display:grid!important;place-items:center;flex:0 0 42px;border-radius:11px;background:#ede5f4;color:#51267a}
+.registry-metric-icon svg,.onboarding-icon svg,.filter-search svg,.filter-toggle svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.registry-metric>div{min-width:0}
+.registry-metric>div>span{font-size:12px;color:#475569}
+.registry-metric strong{margin:6px 0 3px;color:#1f2937;font-size:27px}
+.registry-onboarding{justify-content:center;min-height:142px;margin-bottom:18px;padding:24px;background:#fff;border:1px solid #e5e7eb;text-align:left;box-shadow:0 5px 16px rgba(53,22,83,.04)}
+.registry-onboarding .onboarding-icon{border-radius:14px;background:#ede5f4;color:#51267a}
+.registry-onboarding h2{margin:0 0 5px;color:#1f2937;font:800 18px/1.25 'Manrope'}
+.registry-onboarding p{margin:0;color:#64748b;font-size:13px}
+.registry-onboarding .onboarding-actions{margin-left:22px}
+.registry-directory{overflow:hidden;border-color:#e5e7eb}
+.registry-heading{padding:18px 22px}
+.registry-heading h2{font-size:18px;text-transform:none}
+.registry-record-count{padding:6px 10px;border-radius:99px;background:#f7f5fa;color:#64748b;font-size:11px;font-weight:700;white-space:nowrap}
+.registry-filter-primary{display:grid;grid-template-columns:minmax(260px,1fr) auto;gap:10px}
+.filter-search{position:relative;display:block!important}
+.filter-search svg{position:absolute;left:13px;top:11px;color:#7b49a5;pointer-events:none}
+.filter-search input{width:100%;padding-left:42px}
+.filter-toggle{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-width:104px;color:#51267a}
+.filter-toggle svg{width:17px;height:17px}
+.registry-filter-advanced{grid-template-columns:repeat(3,minmax(0,1fr));align-items:end;padding:16px;margin-top:14px;border:1px solid #e5e7eb;border-radius:12px;background:#fff}
+.registry-filter-advanced[hidden]{display:none!important}
+.registry-filter-advanced .registry-filter-actions{align-self:end;justify-content:flex-start;padding:0}
+.registry-filter-actions .btn{height:42px}
+.status-neutral{background:#f1f5f9;color:#64748b}
+.registry-directory-empty{padding:30px 22px;border-top:1px solid #e5e7eb;text-align:center;color:#64748b;font-size:12px}
+.registry-directory-empty p{margin:0}
+.registry-table th{background:#faf9fb;color:#64748b;font-size:10px;letter-spacing:.04em;text-transform:uppercase}
+.registry-table td{padding-top:13px;padding-bottom:13px}
+@media(max-width:900px){
+.registry-page-header{align-items:flex-start}
+.registry-filter-advanced{grid-template-columns:repeat(2,minmax(0,1fr))}
+.registry-onboarding{justify-content:flex-start;flex-wrap:wrap}
+.registry-onboarding .onboarding-actions{width:100%;margin-left:68px}
+}
+@media(max-width:620px){
+.registry-page-header{gap:16px}
+.registry-page-header h1{font-size:25px}
+.registry-page-header .page-actions{grid-template-columns:1fr;width:100%}
+.registry-metrics{grid-template-columns:1fr}
+.registry-metric{min-height:92px}
+.registry-onboarding{display:grid;grid-template-columns:46px minmax(0,1fr);gap:14px;padding:18px}
+.registry-onboarding .onboarding-icon{width:46px;height:46px;flex-basis:46px}
+.registry-onboarding .onboarding-actions{grid-column:1/-1;display:grid;grid-template-columns:1fr;width:100%;margin:2px 0 0}
+.registry-onboarding .btn{width:100%}
+.registry-heading{align-items:flex-start;padding:16px}
+.registry-heading p{display:none}
+.registry-filters{padding:14px}
+.registry-filter-primary,.registry-filter-advanced{grid-template-columns:1fr}
+.registry-filter-primary .filter-toggle{width:100%}
+.registry-filter-advanced{padding:13px}
+.registry-filter-advanced .registry-filter-actions{display:grid;grid-template-columns:1fr 1fr;width:100%}
+.registry-filter-actions .btn{width:100%}
+.registry-directory .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.registry-table{min-width:780px}
+}

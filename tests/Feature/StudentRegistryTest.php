@@ -30,6 +30,30 @@ class StudentRegistryTest extends TestCase
             ->assertDontSee('Ben Santos');
     }
 
+    public function test_empty_registry_shows_single_onboarding_action_set_and_no_filters(): void
+    {
+        $response = $this->actingAs($this->userWith('students.view'))->get('/students');
+
+        $response->assertOk()
+            ->assertSee('Import your first student records')
+            ->assertSee('Student search and filters will be available after the first CSV import.')
+            ->assertDontSee('id="registryFilters"', false);
+        $this->assertSame(1, substr_count($response->getContent(), 'Download Template'));
+    }
+
+    public function test_populated_registry_moves_csv_actions_to_header_and_shows_filters(): void
+    {
+        Student::create(['student_number' => '00003', 'first_name' => 'Carla', 'last_name' => 'Mendoza']);
+
+        $response = $this->actingAs($this->userWith('students.view'))->get('/students');
+
+        $response->assertOk()
+            ->assertDontSee('Import your first student records')
+            ->assertSee('id="registryFilters"', false)
+            ->assertSee('Active Students');
+        $this->assertSame(1, substr_count($response->getContent(), 'Download CSV Template'));
+    }
+
     public function test_manager_can_create_student_and_leading_zeroes_are_preserved(): void
     {
         $user = $this->userWith('students.manage');

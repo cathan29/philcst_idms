@@ -53,7 +53,7 @@ class StudentController extends Controller
             'metrics' => [
                 'total' => Student::count(),
                 'with_cards' => Student::whereHas('idCards')->count(),
-                'review' => Student::where('status', 'inactive')->orWhereDoesntHave('idCards')->count(),
+                'active' => Student::where('status', 'active')->count(),
             ],
         ]);
     }
