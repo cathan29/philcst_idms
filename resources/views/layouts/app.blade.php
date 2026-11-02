@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'ID Monitoring') · PhilCST IDMS</title>
+    <title>@yield('title', 'ID Monitoring') Â· PhilCST IDMS</title>
     <link rel="stylesheet" href="{{ asset('css/app.css') }}">
 </head>
 <body class="has-navigation-rail">
@@ -29,7 +29,7 @@
                 <span class="nav-disabled" title="ID releasing module is not available yet"><span class="nav-icon"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><circle cx="12" cy="9" r="3"/><path d="M8 16h8"/></svg></span>ID Releasing</span>
                 <span class="nav-disabled" title="Reports module is not available yet"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M4 19V5m0 14h16M8 16v-4m4 4V8m4 8v-7m4 7V4"/></svg></span>Reports &amp; Analytics</span>
             </nav>
-            <div class="sidebar-secondary"><span>Administration</span><a class="{{ request()->routeIs('holders.*') ? 'active' : '' }}" href="{{ route('holders.index') }}" data-tooltip="Access Directory" title="Access Directory"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.6 2.8 8.1 7 10 4.2-1.9 7-5.4 7-10V6l-7-3Z"/><path d="m9 12 2 2 4-5"/></svg></span><span class="nav-label">Access Directory</span></a><a class="{{ request()->routeIs('logs.*') ? 'active' : '' }}" href="{{ route('logs.index') }}" data-tooltip="Scan Activity" title="Scan Activity"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg></span><span class="nav-label">Scan Activity</span></a></div>
+            <div class="sidebar-secondary"><span>Administration</span><a class="{{ request()->routeIs('holders.*') ? 'active' : '' }}" href="{{ route('holders.index') }}" data-tooltip="Access Directory" title="Access Directory"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.6 2.8 8.1 7 10 4.2-1.9 7-5.4 7-10V6l-7-3Z"/><path d="m9 12 2 2 4-5"/></svg></span><span class="nav-label">Access Directory</span></a><a class="{{ request()->routeIs('logs.*') ? 'active' : '' }}" href="{{ route('logs.index') }}" data-tooltip="Scan Activity" title="Scan Activity"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg></span><span class="nav-label">Scan Activity</span></a>@if(auth()->user()->hasPermission('settings.manage'))<a class="{{ request()->routeIs('academic-terms.*') ? 'active' : '' }}" href="{{ route('academic-terms.index') }}" data-tooltip="Academic Terms" title="Academic Terms"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M7 3v3m10-3v3M4 9h16M5 5h14a1 1 0 0 1 1 1v14H4V6a1 1 0 0 1 1-1Z"/></svg></span><span class="nav-label">Academic Terms</span></a>@endif</div>
             <div class="sidebar-user">
                 <div class="avatar">{{ strtoupper(substr(auth()->user()->name, 0, 1)) }}</div>
                 <div class="sidebar-user-copy"><strong title="{{ auth()->user()->name }}">{{ auth()->user()->name }}</strong><small title="{{ auth()->user()->email }}">{{ auth()->user()->email }}</small></div>

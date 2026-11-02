@@ -6,13 +6,8 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class StudentImportRequest extends FormRequest
 {
-    public function authorize(): bool
-    {
-        return $this->user()?->hasPermission('imports.manage') === true;
-    }
-
     public function rules(): array
     {
-        return ['csv' => ['required', 'file', 'extensions:csv', 'mimetypes:text/csv,text/plain,application/csv,application/vnd.ms-excel', 'max:10240']];
+        return ['academic_term_id' => ['required', 'integer', 'exists:academic_terms,id'], 'coverage' => ['required', 'in:all,specific'], 'coverage_program_id' => ['nullable', 'required_if:coverage,specific', 'integer', 'exists:programs,id'], 'csv' => ['required', 'file', 'extensions:csv', 'mimetypes:text/csv,text/plain,application/csv,application/vnd.ms-excel', 'max:'.config('idms.import_max_kilobytes', 25600)]];
     }
 }

@@ -2,7 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Models\AcademicTerm;
+use App\Models\AcademicYear;
 use App\Models\Permission;
+use App\Models\Program;
 use App\Models\Role;
 use App\Models\Student;
 use App\Models\User;
@@ -52,6 +55,24 @@ class StudentRegistryTest extends TestCase
             ->assertSee('id="registryFilters"', false)
             ->assertSee('Active Students');
         $this->assertSame(1, substr_count($response->getContent(), 'Download CSV Template'));
+    }
+
+    public function test_term_filter_returns_unique_students_and_selected_enrollment(): void
+    {
+        $user = $this->userWith('students.view');
+        $year = AcademicYear::create(['name' => '2026-2027']);
+        $first = AcademicTerm::create(['academic_year_id' => $year->id, 'code' => 'first_semester', 'name' => 'First Semester', 'status' => 'active']);
+        $second = AcademicTerm::create(['academic_year_id' => $year->id, 'code' => 'second_semester', 'name' => 'Second Semester', 'status' => 'active']);
+        $program = Program::create(['code' => 'BSIT', 'name' => 'Information Technology']);
+        $student = Student::create(['student_number' => '00040', 'first_name' => 'Term', 'last_name' => 'Student']);
+        $student->enrollments()->create(['program_id' => $program->id, 'academic_year_id' => $year->id, 'academic_term_id' => $first->id, 'semester' => $first->name, 'year_level' => '1st Year', 'section' => 'A']);
+        $student->enrollments()->create(['program_id' => $program->id, 'academic_year_id' => $year->id, 'academic_term_id' => $second->id, 'semester' => $second->name, 'year_level' => '1st Year', 'section' => 'B']);
+
+        $response = $this->actingAs($user)->get('/students?academic_term='.$first->id);
+        $response->assertOk()->assertSee('Term Student')->assertSee('First Semester')->assertSee('1st Year / A');
+        $this->assertSame(1, $response->viewData('metrics')['total']);
+        $this->assertSame(1, $response->viewData('students')->total());
+        $this->assertSame($first->id, $response->viewData('students')->first()->displayEnrollment->academic_term_id);
     }
 
     public function test_manager_can_create_student_and_leading_zeroes_are_preserved(): void

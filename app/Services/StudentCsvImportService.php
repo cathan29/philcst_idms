@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Models\AcademicYear;
+use App\Models\AcademicTerm;
 use App\Models\ImportBatch;
 use App\Models\Program;
 use App\Models\Student;
@@ -18,123 +18,79 @@ class StudentCsvImportService
 {
     public const FIELDS = ['student_number', 'first_name', 'middle_name', 'last_name', 'suffix', 'status', 'program', 'year_level', 'section', 'academic_year', 'semester'];
 
-    public function preview(UploadedFile $file): array
+    private const ALIASES = ['student_number' => ['student_number', 'student number', 'student id', 'id number', 'id_number'], 'first_name' => ['first_name', 'first name', 'given name', 'given'], 'middle_name' => ['middle_name', 'middle name'], 'last_name' => ['last_name', 'last name', 'surname', 'family name', 'family'], 'suffix' => ['suffix', 'name suffix'], 'status' => ['status', 'student status', 'state'], 'program' => ['program', 'program code', 'course'], 'year_level' => ['year_level', 'year level', 'year'], 'section' => ['section', 'class section', 'block'], 'academic_year' => ['academic_year', 'academic year', 'school year'], 'semester' => ['semester', 'term']];
+
+    public function preview(UploadedFile $file, array $context): array
     {
         $path = $file->storeAs('imports/previews', Str::uuid().'.csv', 'local');
-        $absolutePath = Storage::disk('local')->path($path);
-        $this->validateFile($absolutePath);
-        $parsed = $this->parse($absolutePath);
-        $parsed['stored_path'] = $path;
-        $parsed['original_filename'] = $file->getClientOriginalName();
-        $parsed['file_size'] = $file->getSize();
+        $absolute = Storage::disk('local')->path($path);
+        $this->validateFile($absolute);
+        $parsed = $this->parse($absolute, null, $context);
+        $term = $this->term($context);
 
-        return $parsed;
+        return [...$parsed, 'stored_path' => $path, 'original_filename' => $file->getClientOriginalName(), 'file_size' => $file->getSize(), 'context' => $context, 'term' => $this->termData($term)];
     }
 
-    public function validateStored(string $path, array $mapping): array
+    public function validateStored(string $path, array $mapping, array $context): array
     {
-        $absolutePath = Storage::disk('local')->path($path);
-        $this->validateFile($absolutePath);
+        $absolute = Storage::disk('local')->path($path);
+        $this->validateFile($absolute);
 
-        return $this->parse($absolutePath, $mapping);
+        return $this->parse($absolute, $mapping, $context);
     }
 
-    public function commit(string $path, string $filename, int $userId, string $mode = 'insert_or_update', ?array $selectedMapping = null): ImportBatch
+    public function commit(string $path, string $filename, int $userId, string $mode, array $mapping, array $context): ImportBatch
     {
-        $absolutePath = Storage::disk('local')->path($path);
-        if (! is_file($absolutePath)) {
-            throw new RuntimeException('The import preview has expired. Please upload the CSV again.');
-        }
+        $absolute = Storage::disk('local')->path($path);
+        if (! is_file($absolute)) {
+            throw new RuntimeException('The import preview expired. Upload the CSV again.');
+        }$parsed = $this->parse($absolute, $mapping, $context, true);
+        $term = $this->term($context);
 
-        $parsed = $this->parse($absolutePath, $selectedMapping);
-        $batch = DB::transaction(function () use ($parsed, $path, $filename, $userId, $mode) {
-            $batch = ImportBatch::create([
-                'id' => (string) Str::uuid(),
-                'original_filename' => $filename,
-                'stored_path' => $path,
-                'file_hash' => hash_file('sha256', Storage::disk('local')->path($path)),
-                'uploaded_by' => $userId,
-                'mode' => $mode,
-                'status' => 'processing',
-                'total_rows' => $parsed['summary']['total'],
-                'valid_rows' => $parsed['summary']['valid'],
-                'duplicate_rows' => $parsed['summary']['duplicates'],
-                'rejected_rows' => $parsed['summary']['invalid'],
-                'column_mapping' => $parsed['mapping'],
-            ]);
-
+        return DB::transaction(function () use ($parsed, $path, $filename, $userId, $mode, $mapping, $context, $term) {
+            $batch = ImportBatch::create(['id' => (string) Str::uuid(), 'original_filename' => $filename, 'stored_path' => $path, 'file_hash' => hash_file('sha256', Storage::disk('local')->path($path)), 'uploaded_by' => $userId, 'academic_term_id' => $term->id, 'coverage_program_id' => $context['coverage_program_id'] ?? null, 'mode' => $mode, 'status' => 'processing', 'total_rows' => $parsed['summary']['total'], 'valid_rows' => $parsed['summary']['valid'], 'duplicate_rows' => $parsed['summary']['duplicates'], 'rejected_rows' => $parsed['summary']['invalid'], 'column_mapping' => $mapping]);
             foreach ($parsed['errors'] as $row) {
-                if ($row['errors'] === []) {
-                    continue;
-                }
-                DB::table('import_errors')->insert([
-                    'import_batch_id' => $batch->id,
-                    'row_number' => $row['number'],
-                    'code' => str_contains(implode(' ', $row['errors']), 'duplicate') ? 'duplicate_row' : 'invalid_row',
-                    'message' => implode('; ', $row['errors']),
-                    'safe_row_data' => json_encode($row['data'], JSON_THROW_ON_ERROR),
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
-            }
-
-            $inserted = $updated = $unchanged = 0;
+                DB::table('import_errors')->insert(['import_batch_id' => $batch->id, 'row_number' => $row['number'], 'code' => str_contains(implode(' ', $row['errors']), 'duplicate') ? 'duplicate_row' : 'invalid_row', 'message' => implode('; ', $row['errors']), 'safe_row_data' => json_encode($row['data'], JSON_THROW_ON_ERROR), 'created_at' => now(), 'updated_at' => now()]);
+            }$inserted = $updated = $unchanged = 0;
             foreach ($parsed['valid_rows'] as $row) {
-                $studentData = Arr::only($row, ['student_number', 'first_name', 'middle_name', 'last_name', 'suffix', 'status']);
+                $identity = Arr::only($row, ['student_number', 'first_name', 'middle_name', 'last_name', 'suffix', 'status']);
                 $student = Student::where('student_number', $row['student_number'])->first();
                 if (! $student) {
-                    $student = Student::create([...$studentData, 'record_source' => 'csv']);
-                    $this->syncEnrollment($student, $row);
+                    $student = Student::create([...$identity, 'record_source' => 'csv']);
+                    $this->syncEnrollment($student, $row, $term);
                     $inserted++;
 
                     continue;
                 }
                 if ($mode === 'insert_only') {
-                    $unchanged++;
+                    if ($student->enrollments()->where('academic_term_id', $term->id)->exists()) {
+                        $unchanged++;
+                    } else {
+                        $this->syncEnrollment($student, $row, $term);
+                        $updated++;
+                    }
 
                     continue;
                 }
-                $changes = collect($studentData)->except('student_number')->filter(fn ($value, $key) => $student->{$key} !== $value)->all();
-                if ($changes !== []) {
+                $changes = collect($identity)->except('student_number')->filter(fn ($value, $key) => (string) $student->{$key} !== (string) $value)->all();
+                if ($changes) {
                     $student->update([...$changes, 'record_source' => 'csv']);
-                }
-                $enrollmentChanged = $this->syncEnrollment($student, $row);
-                if ($changes === [] && ! $enrollmentChanged) {
+                }$enrollmentChanged = $this->syncEnrollment($student, $row, $term);
+                if (! $changes && ! $enrollmentChanged) {
                     $unchanged++;
                 } else {
                     $updated++;
                 }
-            }
-
-            $batch->update([
-                'status' => 'completed',
-                'imported_rows' => $inserted,
-                'updated_rows' => $updated,
-                'unchanged_rows' => $unchanged,
-            ]);
+            } $batch->update(['status' => 'completed', 'imported_rows' => $inserted, 'updated_rows' => $updated, 'unchanged_rows' => $unchanged]);
 
             return $batch->refresh();
         });
-
-        return $batch;
     }
 
-    private function syncEnrollment(Student $student, array $row): bool
+    private function syncEnrollment(Student $student, array $row, AcademicTerm $term): bool
     {
-        if (blank($row['program']) || blank($row['academic_year']) || blank($row['year_level'])) {
-            return false;
-        }
-        $program = Program::query()->whereRaw('LOWER(code) = ?', [strtolower($row['program'])])->orWhereRaw('LOWER(name) = ?', [strtolower($row['program'])])->firstOrFail();
-        $academicYear = AcademicYear::where('name', $row['academic_year'])->firstOrFail();
-        $enrollment = $student->enrollments()->updateOrCreate([
-            'academic_year_id' => $academicYear->id,
-            'semester' => filled($row['semester']) ? $row['semester'] : null,
-        ], [
-            'program_id' => $program->id,
-            'year_level' => $row['year_level'],
-            'section' => filled($row['section']) ? $row['section'] : null,
-            'status' => 'enrolled',
-        ]);
+        $program = $this->program($row['program']);
+        $enrollment = $student->enrollments()->updateOrCreate(['academic_term_id' => $term->id], ['program_id' => $program->id, 'academic_year_id' => $term->academic_year_id, 'semester' => $term->name, 'year_level' => $row['year_level'], 'section' => filled($row['section']) ? $row['section'] : null, 'status' => 'enrolled']);
 
         return $enrollment->wasRecentlyCreated || $enrollment->wasChanged();
     }
@@ -143,165 +99,164 @@ class StudentCsvImportService
     {
         if (! is_file($path) || ! is_readable($path) || filesize($path) === 0) {
             throw new RuntimeException('The CSV file is empty or cannot be read.');
-        }
-        $sample = file_get_contents($path, false, null, 0, 65536);
+        }$sample = file_get_contents($path, false, null, 0, 65536);
         if ($sample === false || ! mb_check_encoding($sample, 'UTF-8')) {
             throw new RuntimeException('The CSV must use UTF-8 encoding.');
         }
     }
 
-    /** @return array<string, mixed> */
-    private function parse(string $path, ?array $selectedMapping = null): array
+    private function parse(string $path, ?array $selectedMapping, array $context, bool $collectValid = false): array
     {
+        $term = $this->term($context);
+        $coverageProgram = filled($context['coverage_program_id'] ?? null) ? Program::whereKey($context['coverage_program_id'])->where('is_active', true)->firstOrFail() : null;
         $csv = new SplFileObject($path);
         $csv->setFlags(SplFileObject::READ_CSV | SplFileObject::SKIP_EMPTY | SplFileObject::DROP_NEW_LINE);
         $header = $csv->fgetcsv();
-        if (! is_array($header) || count(array_filter($header)) === 0) {
-            throw new RuntimeException('The CSV file does not contain a readable header row.');
-        }
-        $header = array_map(fn ($value) => strtolower(trim((string) $value, " \t\n\r\0\x0B\xEF\xBB\xBF")), $header);
+        if (! is_array($header) || ! array_filter($header)) {
+            throw new RuntimeException('The CSV does not contain a readable header row.');
+        }$header = array_map(fn ($v) => strtolower(trim((string) $v, " \t\n\r\0\x0B\xEF\xBB\xBF")), $header);
         if (in_array('', $header, true)) {
-            throw new RuntimeException('The CSV contains a blank column header. Name every column before uploading.');
-        }
-        if (count($header) !== count(array_unique($header))) {
-            throw new RuntimeException('The CSV contains duplicate column headers. Each heading must be unique.');
-        }
-        $headerMap = array_flip($header);
+            throw new RuntimeException('The CSV contains a blank header.');
+        }if (count($header) !== count(array_unique($header))) {
+            throw new RuntimeException('The CSV contains duplicate headers.');
+        }$headerMap = array_flip($header);
         $mapping = [];
         if ($selectedMapping !== null) {
-            foreach (self::FIELDS as $field) {
-                $selected = strtolower(trim((string) ($selectedMapping[$field] ?? '')));
-                if ($selected !== '' && array_key_exists($selected, $headerMap)) {
-                    $mapping[$field] = $headerMap[$selected];
+            $selected = array_filter(array_values($selectedMapping), fn ($v) => filled($v));
+            if (count($selected) !== count(array_unique($selected))) {
+                throw new RuntimeException('Each CSV column can only be mapped once.');
+            }foreach (self::FIELDS as $field) {
+                $column = strtolower(trim((string) ($selectedMapping[$field] ?? '')));
+                if ($column !== '' && array_key_exists($column, $headerMap)) {
+                    $mapping[$field] = $headerMap[$column];
                 }
             }
         } else {
-            $aliases = [
-                'student_number' => ['student_number', 'student number', 'student id', 'id number', 'id_number'],
-                'first_name' => ['first_name', 'first name', 'given name', 'given'],
-                'middle_name' => ['middle_name', 'middle name'],
-                'last_name' => ['last_name', 'last name', 'surname', 'family name', 'family'],
-                'suffix' => ['suffix', 'name suffix'],
-                'status' => ['status', 'student status', 'state'],
-                'program' => ['program', 'program code', 'course'],
-                'year_level' => ['year_level', 'year level', 'year'],
-                'section' => ['section', 'class section'],
-                'academic_year' => ['academic_year', 'academic year', 'school year'],
-                'semester' => ['semester', 'term'],
-            ];
-            foreach ($aliases as $field => $candidates) {
-                foreach ($candidates as $candidate) {
-                    if (array_key_exists($candidate, $headerMap)) {
-                        $mapping[$field] = $headerMap[$candidate];
+            foreach (self::ALIASES as $field => $aliases) {
+                foreach ($aliases as $alias) {
+                    if (array_key_exists($alias, $headerMap)) {
+                        $mapping[$field] = $headerMap[$alias];
                         break;
                     }
                 }
             }
-        }
-        if ($selectedMapping !== null) {
-            $selectedColumns = array_filter(array_values($selectedMapping), fn ($value) => filled($value));
-            if (count($selectedColumns) !== count(array_unique($selectedColumns))) {
-                throw new RuntimeException('Each CSV column can only be mapped to one student field.');
-            }
-            foreach (['student_number', 'first_name', 'last_name'] as $required) {
-                if (! array_key_exists($required, $mapping)) {
-                    throw new RuntimeException("Required CSV column missing: {$required}.");
-                }
+        }foreach (['student_number', 'first_name', 'last_name'] as $required) {
+            if ($selectedMapping !== null && ! isset($mapping[$required])) {
+                throw new RuntimeException("Required CSV column missing: {$required}.");
             }
         }
-
         $rows = [];
-        $errorRows = [];
+        $errors = [];
         $validRows = [];
         $seen = [];
-        $invalid = 0;
-        $duplicates = 0;
-        $rowNumber = 1;
+        $summary = ['total' => 0, 'valid' => 0, 'new_students' => 0, 'new_enrollments' => 0, 'modified_enrollments' => 0, 'unchanged_enrollments' => 0, 'duplicates' => 0, 'invalid' => 0];
+        $number = 1;
         foreach ($csv as $values) {
-            $rowNumber++;
-            if (! is_array($values) || count(array_filter($values, fn ($value) => trim((string) $value) !== '')) === 0) {
+            $number++;
+            if (! is_array($values) || ! array_filter($values, fn ($v) => trim((string) $v) !== '')) {
                 continue;
-            }
+            }$summary['total']++;
             $row = [];
             foreach (self::FIELDS as $field) {
                 $row[$field] = isset($mapping[$field]) ? trim((string) ($values[$mapping[$field]] ?? '')) : '';
-            }
-            $row['status'] = $row['status'] !== '' ? $row['status'] : 'active';
-            $errors = count($values) === count($header) ? [] : ['row has a different number of columns than the header'];
-            foreach (['student_number', 'first_name', 'last_name'] as $required) {
-                if ($row[$required] === '') {
-                    $errors[] = "{$required} is required";
+            }$row['status'] = $row['status'] ?: 'active';
+            if ($coverageProgram) {
+                $row['program'] = $coverageProgram->code;
+            }$rowErrors = count($values) === count($header) ? [] : ['row has a different number of columns than the header'];
+            foreach (['student_number', 'first_name', 'last_name', 'program', 'year_level'] as $required) {
+                if (blank($row[$required])) {
+                    $rowErrors[] = "{$required} is required";
                 }
-            }
-            if (! in_array($row['status'], ['active', 'inactive', 'graduated', 'withdrawn'], true)) {
-                $errors[] = 'status is invalid';
-            }
-            $hasEnrollmentData = collect(['program', 'year_level', 'section', 'academic_year', 'semester'])->contains(fn ($field) => filled($row[$field]));
-            if ($hasEnrollmentData) {
-                foreach (['program', 'year_level', 'academic_year'] as $requiredEnrollmentField) {
-                    if (blank($row[$requiredEnrollmentField])) {
-                        $errors[] = "{$requiredEnrollmentField} is required when enrollment data is mapped";
-                    }
+            }if (! in_array($row['status'], ['active', 'inactive', 'graduated', 'withdrawn'], true)) {
+                $rowErrors[] = 'status is invalid';
+            }if (filled($row['year_level']) && ! preg_match('/^(?:[1-6](?:st|nd|rd|th)?(?:\s+year)?|graduate)$/i', $row['year_level'])) {
+                $rowErrors[] = 'year_level is invalid';
+            }$program = null;
+            if (filled($row['program'])) {
+                $program = $this->findProgram($row['program']);
+                if (! $program) {
+                    $rowErrors[] = 'program does not match an authorized program';
+                }if ($coverageProgram && $program?->id !== $coverageProgram->id) {
+                    $rowErrors[] = 'program conflicts with selected coverage';
                 }
-                if (filled($row['year_level']) && ! preg_match('/^(?:[1-6](?:st|nd|rd|th)?(?:\s+year)?|graduate)$/i', $row['year_level'])) {
-                    $errors[] = 'year_level is invalid';
-                }
-                if (filled($row['program']) && ! Program::query()->whereRaw('LOWER(code) = ?', [strtolower($row['program'])])->orWhereRaw('LOWER(name) = ?', [strtolower($row['program'])])->exists()) {
-                    $errors[] = 'program does not match an authorized program record';
-                }
-                if (filled($row['academic_year']) && ! AcademicYear::where('name', $row['academic_year'])->exists()) {
-                    $errors[] = 'academic_year does not match an authorized academic year record';
-                }
-            }
-            if ($row['student_number'] !== '' && isset($seen[$row['student_number']])) {
-                $errors[] = 'duplicate student number in this file';
-            }
-            if ($errors !== []) {
-                if (isset($seen[$row['student_number']])) {
-                    $duplicates++;
-                } else {
-                    $invalid++;
-                }
-                $rows[] = ['number' => $rowNumber, 'data' => $row, 'errors' => $errors, 'state' => 'invalid'];
-                $errorRows[] = ['number' => $rowNumber, 'data' => $row, 'errors' => $errors, 'state' => 'invalid'];
+            }if (filled($row['academic_year']) && strcasecmp($row['academic_year'], $term->academicYear->name) !== 0) {
+                $rowErrors[] = 'academic_year conflicts with selected import term';
+            }if (filled($row['semester']) && ! $this->sameTerm($row['semester'], $term)) {
+                $rowErrors[] = 'semester conflicts with selected import term';
+            }if (filled($row['student_number']) && isset($seen[$row['student_number']])) {
+                $rowErrors[] = 'duplicate student number in this file';
+            }if ($rowErrors) {
+                $duplicate = collect($rowErrors)->contains(fn ($e) => str_contains($e, 'duplicate'));
+                $summary[$duplicate ? 'duplicates' : 'invalid']++;
+                $entry = ['number' => $number, 'data' => $row, 'errors' => $rowErrors, 'state' => 'invalid'];
+                if (count($rows) < 100) {
+                    $rows[] = $entry;
+                }$errors[] = $entry;
 
                 continue;
-            }
-            $seen[$row['student_number']] = true;
+            }$seen[$row['student_number']] = true;
             $existing = Student::where('student_number', $row['student_number'])->first();
-            $state = 'new';
-            if ($existing) {
-                $studentData = Arr::only($row, ['student_number', 'first_name', 'middle_name', 'last_name', 'suffix', 'status']);
-                $changes = collect($studentData)->except('student_number')->filter(fn ($value, $key) => $existing->{$key} !== $value);
-                $enrollmentChanged = false;
-                if ($hasEnrollmentData) {
-                    $program = Program::query()->whereRaw('LOWER(code) = ?', [strtolower($row['program'])])->orWhereRaw('LOWER(name) = ?', [strtolower($row['program'])])->first();
-                    $academicYear = AcademicYear::where('name', $row['academic_year'])->first();
-                    $enrollment = $existing->enrollments()->where('academic_year_id', $academicYear?->id)->where('semester', filled($row['semester']) ? $row['semester'] : null)->first();
-                    $enrollmentChanged = ! $enrollment || $enrollment->program_id !== $program?->id || $enrollment->year_level !== $row['year_level'] || (string) $enrollment->section !== (string) $row['section'];
+            $state = 'new_student';
+            if (! $existing) {
+                $summary['new_students']++;
+            } else {
+                $enrollment = $existing->enrollments()->where('academic_term_id', $term->id)->first();
+                if (! $enrollment) {
+                    $state = 'new_enrollment';
+                    $summary['new_enrollments']++;
+                } elseif ($enrollment->program_id !== $program?->id || (string) $enrollment->year_level !== (string) $row['year_level'] || (string) $enrollment->section !== (string) $row['section']) {
+                    $state = 'modified_enrollment';
+                    $summary['modified_enrollments']++;
+                } else {
+                    $state = 'unchanged_enrollment';
+                    $summary['unchanged_enrollments']++;
                 }
-                $state = $changes->isEmpty() && ! $enrollmentChanged ? 'unchanged' : 'changed';
-            }
-            $rows[] = ['number' => $rowNumber, 'data' => $row, 'errors' => [], 'state' => $state];
-            $validRows[] = $row;
-        }
-
-        foreach ($rows as $row) {
-            if (count($validRows) > 100 && count($rows) > 100) {
-                break;
+            }$summary['valid']++;
+            if (count($rows) < 100) {
+                $rows[] = ['number' => $number, 'data' => $row, 'errors' => [], 'state' => $state];
+            }if ($collectValid) {
+                $validRows[] = $row;
             }
         }
+        $summary['new'] = $summary['new_students'];
+        $summary['existing'] = $summary['new_enrollments'] + $summary['modified_enrollments'] + $summary['unchanged_enrollments'];
+        $summary['changed'] = $summary['new_enrollments'] + $summary['modified_enrollments'];
+        $summary['unchanged'] = $summary['unchanged_enrollments'];
 
-        return [
-            'headers' => $header,
-            'mapping' => $mapping,
-            'rows' => array_slice($rows, 0, 100),
-            'errors' => $errorRows,
-            'valid_rows' => $validRows,
-            'summary' => [
-                'total' => count($rows), 'valid' => count($validRows), 'new' => count(array_filter($rows, fn ($row) => $row['state'] === 'new')),
-                'existing' => count(array_filter($rows, fn ($row) => in_array($row['state'], ['changed', 'unchanged'], true))), 'changed' => count(array_filter($rows, fn ($row) => $row['state'] === 'changed')), 'unchanged' => count(array_filter($rows, fn ($row) => $row['state'] === 'unchanged')), 'duplicates' => $duplicates, 'invalid' => $invalid,
-            ],
-        ];
+        return ['headers' => $header, 'mapping' => $mapping, 'rows' => $rows, 'errors' => $errors, 'valid_rows' => $validRows, 'summary' => $summary, 'context' => $context, 'term' => $this->termData($term)];
+    }
+
+    private function term(array $context): AcademicTerm
+    {
+        $term = AcademicTerm::with('academicYear')->whereKey($context['academic_term_id'] ?? null)->first();
+        if (! $term) {
+            throw new RuntimeException('Select a valid academic term.');
+        }if ($term->status !== 'active') {
+            throw new RuntimeException('The selected academic term is closed.');
+        }
+
+        return $term;
+    }
+
+    private function termData(AcademicTerm $term): array
+    {
+        return ['id' => $term->id, 'academic_year' => $term->academicYear->name, 'name' => $term->name, 'label' => $term->academicYear->name.' · '.$term->name];
+    }
+
+    private function findProgram(string $value): ?Program
+    {
+        return Program::where('is_active', true)->where(fn ($q) => $q->whereRaw('LOWER(code)=?', [strtolower($value)])->orWhereRaw('LOWER(name)=?', [strtolower($value)]))->first();
+    }
+
+    private function program(string $value): Program
+    {
+        return $this->findProgram($value) ?? throw new RuntimeException("Unknown program: {$value}");
+    }
+
+    private function sameTerm(string $value, AcademicTerm $term): bool
+    {
+        $normalize = fn ($v) => str((string) $v)->lower()->replace([' ', '-', '_'], '')->toString();
+
+        return in_array($normalize($value), [$normalize($term->name), $normalize($term->code)], true);
     }
 }

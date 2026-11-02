@@ -25,7 +25,7 @@ class DatabaseSeeder extends Seeder
         )]);
 
         $roles = [
-            'administrator' => ['students.view', 'students.manage', 'imports.manage', 'cards.view', 'cards.manage', 'reports.view'],
+            'administrator' => ['students.view', 'students.manage', 'imports.manage', 'cards.view', 'cards.manage', 'reports.view', 'settings.manage'],
             'id-production-staff' => ['students.view', 'cards.view', 'cards.print'],
             'releasing-staff' => ['students.view', 'cards.view', 'cards.release'],
             'viewer-auditor' => ['students.view', 'cards.view', 'reports.view', 'audit.view'],

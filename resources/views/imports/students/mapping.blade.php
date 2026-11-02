@@ -3,6 +3,7 @@
 @section('content')
 <header class="page-header import-page-header"><div><p class="eyebrow">Student Management / Import</p><h1>Map Columns</h1><p class="page-description">Match CSV headings to PhilCST student fields.</p></div><a class="import-back-link" href="{{ route('imports.students.create') }}"><span aria-hidden="true">←</span> Choose another file</a></header>
 @include('imports.students._steps', ['current' => 2])
+<div class="import-guidance term-context"><strong>Selected term</strong><span>{{ $preview['term']['label'] }} · {{ empty($preview['context']['coverage_program_id']) ? 'All programs' : 'Specific program' }}</span></div>
 <section class="panel import-card"><div class="panel-heading"><div><h2>{{ $preview['original_filename'] }}</h2><p>{{ number_format($preview['file_size'] / 1024, 1) }} KB · {{ count($preview['headers']) }} columns detected</p></div></div>
 <form method="POST" action="{{ route('imports.students.validate') }}" class="mapping-form">@csrf
 @if($errors->any())<div class="auth-alert" role="alert">{{ $errors->first() }}</div>@endif

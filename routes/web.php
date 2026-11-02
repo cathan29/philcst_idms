@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AcademicTermController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\IdHolderController;
@@ -42,6 +43,14 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::middleware('permission:students.manage')->group(function () {
         Route::get('/students/{student}/edit', [StudentController::class, 'edit'])->name('students.edit');
         Route::put('/students/{student}', [StudentController::class, 'update'])->name('students.update');
+    });
+    Route::middleware('permission:settings.manage')->group(function () {
+        Route::get('/academic-terms', [AcademicTermController::class, 'index'])->name('academic-terms.index');
+        Route::post('/programs', [AcademicTermController::class, 'storeProgram'])->name('programs.store');
+        Route::put('/programs/{program}', [AcademicTermController::class, 'updateProgram'])->name('programs.update');
+        Route::post('/academic-years', [AcademicTermController::class, 'storeYear'])->name('academic-years.store');
+        Route::post('/academic-terms', [AcademicTermController::class, 'store'])->name('academic-terms.store');
+        Route::put('/academic-terms/{academicTerm}', [AcademicTermController::class, 'update'])->name('academic-terms.update');
     });
     Route::post('/logout', [AuthController::class, 'destroy'])->name('logout');
 });

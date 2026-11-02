@@ -4,7 +4,7 @@
 @section('content')
 @php
     $hasStudents = $metrics['total'] > 0;
-    $advancedKeys = ['program', 'academic_year', 'year_level', 'section', 'status', 'card_status'];
+    $advancedKeys = ['program', 'academic_year', 'academic_term', 'year_level', 'section', 'status', 'card_status'];
     $filtersOpen = collect($advancedKeys)->contains(fn ($key) => filled($filters[$key] ?? null));
 @endphp
 
@@ -65,7 +65,7 @@
             <div class="registry-filter-advanced" id="advancedFilters" @if(!$filtersOpen) hidden @endif>
                 <label><span>Program</span><select name="program"><option value="">All programs</option>@foreach($programs as $program)<option value="{{ $program->id }}" @selected(($filters['program'] ?? null) == $program->id)>{{ $program->code }} · {{ $program->name }}</option>@endforeach</select></label>
                 <label><span>Academic Year</span><select name="academic_year"><option value="">All academic years</option>@foreach($academicYears as $year)<option value="{{ $year->id }}" @selected(($filters['academic_year'] ?? null) == $year->id)>{{ $year->name }}</option>@endforeach</select></label>
-                <label><span>Year Level</span><input name="year_level" value="{{ $filters['year_level'] ?? '' }}" placeholder="e.g. 1st Year"></label>
+                <label><span>Academic Term</span><select name="academic_term"><option value="">All terms</option>@foreach($academicTerms as $term)<option value="{{ $term->id }}" @selected(($filters['academic_term'] ?? null) == $term->id)>{{ $term->academicYear->name }} · {{ $term->name }}</option>@endforeach</select></label><label><span>Year Level</span><input name="year_level" value="{{ $filters['year_level'] ?? '' }}" placeholder="e.g. 1st Year"></label>
                 <label><span>Section</span><input name="section" value="{{ $filters['section'] ?? '' }}" placeholder="Any section"></label>
                 <label><span>Student Status</span><select name="status"><option value="">All statuses</option>@foreach(['active','inactive','graduated','withdrawn'] as $status)<option value="{{ $status }}" @selected(($filters['status'] ?? '') === $status)>{{ str($status)->title() }}</option>@endforeach</select></label>
                 <label><span>ID Card Status</span><select name="card_status"><option value="">All card statuses</option>@foreach(['pending','for_printing','printed','ready_for_release','released','on_hold','revoked'] as $status)<option value="{{ $status }}" @selected(($filters['card_status'] ?? '') === $status)>{{ str($status)->replace('_',' ')->title() }}</option>@endforeach</select></label>
@@ -73,10 +73,10 @@
             </div>
         </form>
 
-        <div class="table-wrap"><table class="registry-table"><thead><tr><th>Student</th><th>Student Number</th><th>Program</th><th>Year / Section</th><th>Academic Year</th><th>ID Status</th><th><span class="sr-only">Actions</span></th></tr></thead><tbody>
+        <div class="table-wrap"><table class="registry-table"><thead><tr><th>Student</th><th>Student Number</th><th>Program</th><th>Year / Section</th><th>Academic Term</th><th>ID Status</th><th><span class="sr-only">Actions</span></th></tr></thead><tbody>
         @forelse($students as $student)
             @php($cardStatus = $student->latestCard?->status)
-            <tr><td><a class="student-link" href="{{ route('students.show', $student) }}"><strong>{{ $student->full_name }}</strong><small>{{ $student->latestEnrollment?->program?->name ?? 'No program linked' }}</small></a></td><td class="mono">{{ $student->student_number }}</td><td>{{ $student->latestEnrollment?->program?->code ?? '—' }}</td><td>{{ collect([$student->latestEnrollment?->year_level, $student->latestEnrollment?->section])->filter()->implode(' / ') ?: '—' }}</td><td>{{ $student->latestEnrollment?->academicYear?->name ?? '—' }}</td><td>@if($cardStatus)<span class="status-badge status-{{ $cardStatus->value }}">{{ str($cardStatus->value)->replace('_',' ')->title() }}</span>@else<span class="status-badge status-neutral">No ID record</span>@endif</td><td><a class="view-action" href="{{ route('students.show', $student) }}">View details<span aria-hidden="true">→</span></a></td></tr>
+            <tr><td><a class="student-link" href="{{ route('students.show', $student) }}"><strong>{{ $student->full_name }}</strong><small>{{ $student->displayEnrollment?->program?->name ?? 'No program linked' }}</small></a></td><td class="mono">{{ $student->student_number }}</td><td>{{ $student->displayEnrollment?->program?->code ?? '—' }}</td><td>{{ collect([$student->displayEnrollment?->year_level, $student->displayEnrollment?->section])->filter()->implode(' / ') ?: '—' }}</td><td>{{ $student->displayEnrollment?->academicTerm ? $student->displayEnrollment->academicTerm->academicYear->name.' · '.$student->displayEnrollment->academicTerm->name : ($student->displayEnrollment?->academicYear?->name ?? '—') }}</td><td>@if($cardStatus)<span class="status-badge status-{{ $cardStatus->value }}">{{ str($cardStatus->value)->replace('_',' ')->title() }}</span>@else<span class="status-badge status-neutral">No ID record</span>@endif</td><td><a class="view-action" href="{{ route('students.show', $student) }}">View details<span aria-hidden="true">→</span></a></td></tr>
         @empty
             <tr><td colspan="7"><div class="registry-empty"><strong>No students match your filters</strong><p>Try clearing a filter or searching by a different name or student number.</p><a class="btn secondary" href="{{ route('students.index') }}">Reset filters</a></div></td></tr>
         @endforelse

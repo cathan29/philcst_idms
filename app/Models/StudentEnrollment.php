@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class StudentEnrollment extends Model
 {
-    protected $fillable = ['student_id', 'program_id', 'academic_year_id', 'semester', 'year_level', 'section', 'status'];
+    protected $fillable = ['student_id', 'program_id', 'academic_year_id', 'academic_term_id', 'semester', 'year_level', 'section', 'status'];
 
     public function student(): BelongsTo
     {
@@ -22,5 +22,10 @@ class StudentEnrollment extends Model
     public function academicYear(): BelongsTo
     {
         return $this->belongsTo(AcademicYear::class);
+    }
+
+    public function academicTerm(): BelongsTo
+    {
+        return $this->belongsTo(AcademicTerm::class);
     }
 }
