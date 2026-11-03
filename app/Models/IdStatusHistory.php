@@ -19,4 +19,9 @@ class IdStatusHistory extends Model
     {
         return $this->belongsTo(IdCard::class, 'id_card_id');
     }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
 }

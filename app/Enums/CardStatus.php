@@ -10,19 +10,13 @@ enum CardStatus: string
     case ReadyForRelease = 'ready_for_release';
     case Released = 'released';
     case OnHold = 'on_hold';
+    case Cancelled = 'cancelled';
     case Revoked = 'revoked';
 
-    /** @return list<self> */
     public function allowedTransitions(): array
     {
         return match ($this) {
-            self::Pending => [self::ForPrinting, self::OnHold, self::Revoked],
-            self::ForPrinting => [self::Printed, self::OnHold, self::Revoked],
-            self::Printed => [self::ReadyForRelease, self::OnHold, self::Revoked],
-            self::ReadyForRelease => [self::Released, self::OnHold, self::Revoked],
-            self::OnHold => [self::Pending, self::ForPrinting, self::Printed, self::ReadyForRelease, self::Revoked],
-            self::Released => [self::Revoked],
-            self::Revoked => [],
+            self::Pending => [self::ForPrinting, self::OnHold, self::Cancelled],self::ForPrinting => [self::Printed, self::OnHold, self::Cancelled],self::Printed => [self::ReadyForRelease, self::OnHold],self::ReadyForRelease => [self::Released, self::OnHold],self::OnHold => [self::Pending, self::ForPrinting, self::Printed, self::ReadyForRelease, self::Cancelled],self::Released => [self::Revoked],self::Cancelled,self::Revoked => []
         };
     }
 

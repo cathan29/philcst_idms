@@ -24,7 +24,7 @@
                 <a class="{{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}" data-tooltip="Overview" title="Overview"><span class="nav-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span><span class="nav-label">Overview</span></a>
                 @if(auth()->user()->hasPermission('students.view'))<a class="{{ request()->routeIs('students.*') ? 'active' : '' }}" href="{{ route('students.index') }}" data-tooltip="Student Registry" title="Student Registry"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></span><span class="nav-label">Student Registry</span></a>@endif
                 @if(auth()->user()->hasPermission('imports.manage'))<a class="{{ request()->routeIs('imports.*') ? 'active' : '' }}" href="{{ route('imports.students.create') }}" data-tooltip="CSV Imports" title="CSV Imports"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M4 17V5a2 2 0 0 1 2-2h8l6 6v8a2 2 0 0 1-2 2h-2"/><path d="M14 3v6h6M3 14v7m0 0 3-3m-3 3-3-3"/></svg></span><span class="nav-label">CSV Imports</span></a>@endif
-                <span class="nav-disabled" title="ID production module is not available yet"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v7H6z"/></svg></span>ID Production</span>
+                @if(auth()->user()->hasPermission('cards.view'))<a class="{{ request()->routeIs('production.*') ? 'active' : '' }}" href="{{ route('production.index') }}" data-tooltip="ID Production" title="ID Production"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v7H6z"/></svg></span><span class="nav-label">ID Production</span></a>@endif
                 <span class="nav-disabled" title="QR scanner station is not configured yet"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M4 4h5v5H4zM15 4h5v5h-5zM4 15h5v5H4zM15 15h2m3 0v5h-5m0-5v2m5-2h0"/></svg></span>QR Scanner</span>
                 <span class="nav-disabled" title="ID releasing module is not available yet"><span class="nav-icon"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><circle cx="12" cy="9" r="3"/><path d="M8 16h8"/></svg></span>ID Releasing</span>
                 <span class="nav-disabled" title="Reports module is not available yet"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M4 19V5m0 14h16M8 16v-4m4 4V8m4 8v-7m4 7V4"/></svg></span>Reports &amp; Analytics</span>
@@ -39,7 +39,7 @@
         <button class="mobile-sidebar-backdrop" id="sidebarBackdrop" type="button" aria-label="Close navigation"></button>
         <main class="main">
             <button class="mobile-menu-button" id="mobileMenuButton" type="button" aria-controls="appSidebar" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg><span class="sr-only">Open navigation</span></button>
-            @if(!request()->routeIs('dashboard', 'students.index', 'imports.*'))
+            @if(!request()->routeIs('dashboard', 'students.index', 'imports.*', 'production.*'))
                 <header class="topbar"><div><p class="eyebrow">PhilCST ID Monitoring &amp; Issuance</p><h1>@yield('heading', 'Dashboard')</h1></div><div class="live-clock" id="liveClock"></div></header>
             @endif
             <div class="content">
@@ -48,7 +48,7 @@
             </div>
         </main>
     </div>
-    @if(!request()->routeIs('dashboard', 'students.index', 'imports.*'))<script>const clock=document.getElementById('liveClock');const tick=()=>{if(clock)clock.textContent=new Intl.DateTimeFormat('en-PH',{dateStyle:'medium',timeStyle:'medium',timeZone:'Asia/Manila'}).format(new Date())};tick();setInterval(tick,1000);</script>@endif
+    @if(!request()->routeIs('dashboard', 'students.index', 'imports.*', 'production.*'))<script>const clock=document.getElementById('liveClock');const tick=()=>{if(clock)clock.textContent=new Intl.DateTimeFormat('en-PH',{dateStyle:'medium',timeStyle:'medium',timeZone:'Asia/Manila'}).format(new Date())};tick();setInterval(tick,1000);</script>@endif
     @stack('scripts')
     <script>
         (() => {

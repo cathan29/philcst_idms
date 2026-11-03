@@ -4,6 +4,7 @@ use App\Http\Controllers\AcademicTermController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\IdHolderController;
+use App\Http\Controllers\IdProductionController;
 use App\Http\Controllers\ScanController;
 use App\Http\Controllers\ScanLogController;
 use App\Http\Controllers\StudentController;
@@ -44,6 +45,16 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::get('/students/{student}/edit', [StudentController::class, 'edit'])->name('students.edit');
         Route::put('/students/{student}', [StudentController::class, 'update'])->name('students.update');
     });
+    Route::middleware('permission:cards.view')->group(function () {
+        Route::get('/production', [IdProductionController::class, 'index'])->name('production.index');
+        Route::get('/production/{card}', [IdProductionController::class, 'show'])->whereNumber('card')->name('production.show');
+        Route::post('/production/{card}/transition', [IdProductionController::class, 'transition'])->name('production.transition');
+    });
+    Route::middleware('permission:cards.manage')->group(function () {
+        Route::get('/production/create/request', [IdProductionController::class, 'create'])->name('production.create');
+        Route::post('/production', [IdProductionController::class, 'store'])->name('production.store');
+    });
+    Route::post('/production/bulk', [IdProductionController::class, 'bulk'])->middleware('permission:cards.print')->name('production.bulk');
     Route::middleware('permission:settings.manage')->group(function () {
         Route::get('/academic-terms', [AcademicTermController::class, 'index'])->name('academic-terms.index');
         Route::post('/programs', [AcademicTermController::class, 'storeProgram'])->name('programs.store');

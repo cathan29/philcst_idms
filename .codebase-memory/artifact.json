@@ -1,11 +1,11 @@
 {
     "schema_version": 2,
-    "commit": "01268922e351ea58681a7e24c89119a602de61da",
-    "indexed_at": "2026-11-02T17:38:32Z",
+    "commit": "c2355eb03b8610c0225d6c503cd09b6f2bd86513",
+    "indexed_at": "2026-11-02T18:06:16Z",
     "project": "id-monitoring-system",
-    "nodes": 757,
-    "edges": 1271,
-    "original_size": 2359296,
-    "compressed_size": 149099,
+    "nodes": 811,
+    "edges": 1434,
+    "original_size": 2424832,
+    "compressed_size": 166383,
     "compression_level": 3
 }
