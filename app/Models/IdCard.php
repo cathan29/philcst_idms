@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class IdCard extends Model
 {
-    protected $fillable = ['student_id', 'academic_year_id', 'academic_term_id', 'card_token', 'external_identifier', 'semester', 'issuance_type', 'replacement_sequence', 'status', 'requested_by', 'assigned_staff_id', 'requested_at', 'printing_started_at', 'printed_at', 'printed_by', 'ready_at', 'released_at', 'released_by', 'hold_previous_status', 'hold_reason', 'held_at', 'held_by', 'hold_resolved_at', 'hold_resolved_by', 'internal_notes'];
+    protected $fillable = ['student_id', 'replaces_card_id', 'academic_year_id', 'academic_term_id', 'card_token', 'external_identifier', 'semester', 'issuance_type', 'replacement_sequence', 'status', 'requested_by', 'assigned_staff_id', 'requested_at', 'printing_started_at', 'printed_at', 'printed_by', 'ready_at', 'released_at', 'released_by', 'hold_previous_status', 'hold_reason', 'held_at', 'held_by', 'hold_resolved_at', 'hold_resolved_by', 'internal_notes'];
 
     protected function casts(): array
     {
@@ -19,6 +19,11 @@ class IdCard extends Model
     public function student(): BelongsTo
     {
         return $this->belongsTo(Student::class);
+    }
+
+    public function replacedCard(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'replaces_card_id');
     }
 
     public function academicTerm(): BelongsTo

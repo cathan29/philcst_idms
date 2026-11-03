@@ -51,6 +51,7 @@ Route::middleware(['auth', 'active'])->group(function () {
         Route::post('/production/{card}/transition', [IdProductionController::class, 'transition'])->name('production.transition');
     });
     Route::middleware('permission:cards.manage')->group(function () {
+        Route::get('/production/students/search', [IdProductionController::class, 'searchStudents'])->middleware('throttle:60,1')->name('production.students.search');
         Route::get('/production/create/request', [IdProductionController::class, 'create'])->name('production.create');
         Route::post('/production', [IdProductionController::class, 'store'])->name('production.store');
     });

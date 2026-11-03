@@ -35,6 +35,7 @@ class IdProductionTest extends TestCase
         $this->assertNull($card->printed_at);
         $this->assertSame($user->id, $card->requested_by);
         $this->assertDatabaseHas('id_status_histories', ['id_card_id' => $card->id, 'new_status' => 'pending']);
+        $this->assertDatabaseHas('audit_logs', ['auditable_id' => $card->id, 'event' => 'id_production_request.created', 'user_id' => $user->id]);
     }
 
     public function test_duplicate_active_request_is_prevented(): void
@@ -53,7 +54,7 @@ class IdProductionTest extends TestCase
         IdCard::create(['student_id' => $student->id, 'card_token' => (string) Str::uuid(), 'issuance_type' => 'initial', 'status' => CardStatus::Released]);
         $user = $this->userWith(['cards.manage']);
         $this->actingAs($user)->post('/production', ['student_id' => $student->id, 'student_enrollment_id' => $enrollment->id, 'issuance_type' => 'initial'])->assertSessionHasErrors('student_id');
-        $this->actingAs($user)->post('/production', ['student_id' => $student->id, 'student_enrollment_id' => $enrollment->id, 'issuance_type' => 'lost'])->assertRedirect();
+        $this->actingAs($user)->post('/production', ['student_id' => $student->id, 'student_enrollment_id' => $enrollment->id, 'issuance_type' => 'lost', 'existing_card_id' => IdCard::where('student_id', $student->id)->where('status', 'released')->value('id')])->assertRedirect();
         $this->assertDatabaseHas('id_cards', ['student_id' => $student->id, 'issuance_type' => 'lost', 'status' => 'pending']);
     }
 
@@ -118,6 +119,78 @@ class IdProductionTest extends TestCase
         $response = $this->actingAs($user)->get('/production?search='.$student->student_number.'&status=pending&academic_term='.$enrollment->academic_term_id);
         $response->assertOk()->assertSee($student->full_name)->assertSee('Pending');
         $this->assertSame($card->id, $response->viewData('cards')->first()->id);
+    }
+
+    public function test_student_search_supports_full_name_and_returns_only_owned_enrollments(): void
+    {
+        [$student, $enrollment] = $this->student();
+        $student->update(['first_name' => 'Maria Elena', 'middle_name' => 'Santos', 'last_name' => 'Cruz']);
+        [, $otherEnrollment] = $this->studentWithNumber('000200', 'Other', 'Learner');
+        $response = $this->actingAs($this->userWith(['cards.manage']))->getJson('/production/students/search?q=Maria+Elena+Cruz');
+        $response->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.id', $student->id);
+        $this->assertSame($enrollment->id, $response->json('data.0.enrollments.0.id'));
+        $this->assertNotSame($otherEnrollment->id, $response->json('data.0.enrollments.0.id'));
+    }
+
+    public function test_create_page_uses_accessible_search_first_picker(): void
+    {
+        $this->actingAs($this->userWith(['cards.manage']))->get('/production/create/request')
+            ->assertOk()->assertSee('role="combobox"', false)
+            ->assertSee('aria-controls="studentSearchResults"', false)
+            ->assertSee('production-request.js')->assertDontSee('student-choice-list');
+    }
+
+    public function test_enrollment_is_required_and_cross_student_enrollment_is_rejected(): void
+    {
+        [$student] = $this->student();
+        [, $otherEnrollment] = $this->studentWithNumber('000201', 'Cross', 'Student');
+        $user = $this->userWith(['cards.manage']);
+        $this->actingAs($user)->post('/production', ['student_id' => $student->id, 'issuance_type' => 'initial'])->assertSessionHasErrors('student_enrollment_id');
+        $this->actingAs($user)->post('/production', ['student_id' => $student->id, 'student_enrollment_id' => $otherEnrollment->id, 'issuance_type' => 'initial'])->assertSessionHasErrors('student_enrollment_id');
+        $this->assertDatabaseCount('id_cards', 0);
+    }
+
+    public function test_other_reason_requires_explanation(): void
+    {
+        [$student, $enrollment] = $this->student();
+        $user = $this->userWith(['cards.manage']);
+        $this->actingAs($user)->post('/production', ['student_id' => $student->id, 'student_enrollment_id' => $enrollment->id, 'issuance_type' => 'other'])->assertSessionHasErrors('internal_notes');
+        $this->actingAs($user)->post('/production', ['student_id' => $student->id, 'student_enrollment_id' => $enrollment->id, 'issuance_type' => 'other', 'internal_notes' => 'Registrar-approved correction'])->assertRedirect();
+        $this->assertDatabaseHas('id_cards', ['student_id' => $student->id, 'issuance_type' => 'other', 'internal_notes' => 'Registrar-approved correction']);
+    }
+
+    public function test_replacement_requires_owned_existing_card_and_preserves_it(): void
+    {
+        [$student, $enrollment] = $this->student();
+        [$other] = $this->studentWithNumber('000202', 'Another', 'Owner');
+        $existing = IdCard::create(['student_id' => $student->id, 'card_token' => (string) Str::uuid(), 'issuance_type' => 'initial', 'status' => CardStatus::Released]);
+        $otherCard = IdCard::create(['student_id' => $other->id, 'card_token' => (string) Str::uuid(), 'issuance_type' => 'initial', 'status' => CardStatus::Released]);
+        $user = $this->userWith(['cards.manage']);
+        $base = ['student_id' => $student->id, 'student_enrollment_id' => $enrollment->id, 'issuance_type' => 'damaged'];
+        $this->actingAs($user)->post('/production', $base)->assertSessionHasErrors('student_id');
+        $this->actingAs($user)->post('/production', $base + ['existing_card_id' => $otherCard->id])->assertSessionHasErrors('student_id');
+        $this->actingAs($user)->post('/production', $base + ['existing_card_id' => $existing->id])->assertRedirect();
+        $this->assertSame(CardStatus::Released, $existing->fresh()->status);
+        $this->assertDatabaseHas('id_cards', ['student_id' => $student->id, 'replaces_card_id' => $existing->id, 'status' => 'pending']);
+    }
+
+    public function test_unauthorized_user_cannot_search_or_create_requests(): void
+    {
+        [$student, $enrollment] = $this->student();
+        $user = $this->userWith(['cards.view']);
+        $this->actingAs($user)->getJson('/production/students/search?q=Syn')->assertForbidden();
+        $this->actingAs($user)->post('/production', ['student_id' => $student->id, 'student_enrollment_id' => $enrollment->id, 'issuance_type' => 'initial'])->assertForbidden();
+    }
+
+    private function studentWithNumber(string $number, string $firstName, string $lastName): array
+    {
+        $year = AcademicYear::firstOrCreate(['name' => '2027-2028']);
+        $term = AcademicTerm::firstOrCreate(['academic_year_id' => $year->id, 'code' => 'second'], ['name' => 'Second Semester', 'status' => 'historical']);
+        $program = Program::firstOrCreate(['code' => 'BSCS'], ['name' => 'Computer Science']);
+        $student = Student::create(['student_number' => $number, 'first_name' => $firstName, 'last_name' => $lastName]);
+        $enrollment = $student->enrollments()->create(['program_id' => $program->id, 'academic_year_id' => $year->id, 'academic_term_id' => $term->id, 'semester' => $term->name, 'year_level' => '2nd Year', 'section' => '1']);
+
+        return [$student, $enrollment];
     }
 
     private function student(): array
