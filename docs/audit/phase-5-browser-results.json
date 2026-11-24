@@ -1,0 +1,322 @@
+{
+  "generated_at": "2026-11-24T10:28:58.833Z",
+  "environment": "isolated SQLite UAT",
+  "browser": "Playwright Chromium",
+  "base_url": "http://127.0.0.1:8010",
+  "passed": 62,
+  "total": 62,
+  "checks": [
+    {
+      "name": "Authorized isolated UAT login",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "dashboard returns HTTP 200",
+      "passed": true,
+      "detail": "200"
+    },
+    {
+      "name": "dashboard has no desktop document overflow",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "dashboard has no unnamed controls",
+      "passed": true,
+      "detail": "0"
+    },
+    {
+      "name": "dashboard images have alternative text",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "student-records returns HTTP 200",
+      "passed": true,
+      "detail": "200"
+    },
+    {
+      "name": "student-records has no desktop document overflow",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "student-records has no unnamed controls",
+      "passed": true,
+      "detail": "0"
+    },
+    {
+      "name": "student-records images have alternative text",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "repro-production returns HTTP 200",
+      "passed": true,
+      "detail": "200"
+    },
+    {
+      "name": "repro-production has no desktop document overflow",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "repro-production has no unnamed controls",
+      "passed": true,
+      "detail": "0"
+    },
+    {
+      "name": "repro-production images have alternative text",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "released-ids returns HTTP 200",
+      "passed": true,
+      "detail": "200"
+    },
+    {
+      "name": "released-ids has no desktop document overflow",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "released-ids has no unnamed controls",
+      "passed": true,
+      "detail": "0"
+    },
+    {
+      "name": "released-ids images have alternative text",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "verification returns HTTP 200",
+      "passed": true,
+      "detail": "200"
+    },
+    {
+      "name": "verification has no desktop document overflow",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "verification has no unnamed controls",
+      "passed": true,
+      "detail": "0"
+    },
+    {
+      "name": "verification images have alternative text",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "reports returns HTTP 200",
+      "passed": true,
+      "detail": "200"
+    },
+    {
+      "name": "reports has no desktop document overflow",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "reports has no unnamed controls",
+      "passed": true,
+      "detail": "0"
+    },
+    {
+      "name": "reports images have alternative text",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "users returns HTTP 200",
+      "passed": true,
+      "detail": "200"
+    },
+    {
+      "name": "users has no desktop document overflow",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "users has no unnamed controls",
+      "passed": true,
+      "detail": "0"
+    },
+    {
+      "name": "users images have alternative text",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "academic-settings returns HTTP 200",
+      "passed": true,
+      "detail": "200"
+    },
+    {
+      "name": "academic-settings has no desktop document overflow",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "academic-settings has no unnamed controls",
+      "passed": true,
+      "detail": "0"
+    },
+    {
+      "name": "academic-settings images have alternative text",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "audit-logs returns HTTP 200",
+      "passed": true,
+      "detail": "200"
+    },
+    {
+      "name": "audit-logs has no desktop document overflow",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "audit-logs has no unnamed controls",
+      "passed": true,
+      "detail": "0"
+    },
+    {
+      "name": "audit-logs images have alternative text",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "Manual verification clears after Enter",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "Manual verification restores keyboard focus",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "dashboard has no desktop-wide document overflow",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "student-records has no desktop-wide document overflow",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "verification has no desktop-wide document overflow",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "reports has no desktop-wide document overflow",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "dashboard has no laptop document overflow",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "student-records has no laptop document overflow",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "verification has no laptop document overflow",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "reports has no laptop document overflow",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "dashboard has no tablet-landscape document overflow",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "student-records has no tablet-landscape document overflow",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "verification has no tablet-landscape document overflow",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "reports has no tablet-landscape document overflow",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "dashboard has no tablet-portrait document overflow",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "student-records has no tablet-portrait document overflow",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "verification has no tablet-portrait document overflow",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "reports has no tablet-portrait document overflow",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "dashboard has no mobile document overflow",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "student-records has no mobile document overflow",
+      "passed": true,
+      "detail": "table.registry-table, thead, tr, th, th"
+    },
+    {
+      "name": "verification has no mobile document overflow",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "reports has no mobile document overflow",
+      "passed": true,
+      "detail": "table.production-table, thead, tr, th, th"
+    },
+    {
+      "name": "Mobile navigation opens into the viewport",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "No browser console errors",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "No browser page errors",
+      "passed": true,
+      "detail": ""
+    }
+  ],
+  "console_errors": [],
+  "page_errors": []
+}

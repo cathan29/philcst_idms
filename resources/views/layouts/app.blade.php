@@ -5,110 +5,261 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'ID Monitoring') &middot; PhilCST IDMS</title>
-    <link rel="stylesheet" href="{{ asset('css/app.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@600;700&display=swap" rel="stylesheet">
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="has-navigation-rail">
-    <div class="app-shell">
-        <aside class="sidebar" id="appSidebar" aria-label="Application sidebar">
-            <div class="sidebar-campus" aria-hidden="true"></div>
-            <div class="sidebar-brand-row">
-            <a href="{{ route('dashboard') }}" class="brand" aria-label="PhilCST IDMS overview">
-                <img class="brand-logo" src="{{ asset('images/philcst-seal.png') }}" alt="Philippine College of Science and Technology seal">
-                <span><strong>PhilCST IDMS</strong><small>ID Monitoring &amp; Issuance<br>Management</small></span>
-            </a>
-            <button class="sidebar-pin" id="sidebarPin" type="button" aria-label="Pin expanded sidebar" aria-pressed="false" title="Pin sidebar">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 17v5M5 3h14l-3 6v4l2 2H6l2-2V9L5 3Z"/></svg>
-            </button>
+<body class="min-h-screen antialiased">
+    @php
+        $user = auth()->user();
+        $isReleasedView = request()->routeIs('production.index') && request('status') === 'released';
+        $isPrintedView = request()->routeIs('production.*') && !$isReleasedView;
+    @endphp
+
+    <a href="#mainContent" class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-[#5B21B6] focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-white">
+        Skip to main content
+    </a>
+
+    <div class="min-h-screen">
+        {{-- Mobile backdrop --}}
+        <div id="sidebarBackdrop" class="fixed inset-0 z-30 hidden bg-[#101828]/45 lg:hidden" aria-hidden="true"></div>
+
+        {{-- Hover-Retractable Royal Purple PHILCST Sidebar --}}
+        <aside id="appSidebar" aria-label="Application sidebar"
+            class="app-sidebar fixed inset-y-0 left-0 z-40 flex -translate-x-full flex-col lg:translate-x-0">
+
+            <div class="flex h-16 items-center justify-between gap-2 border-b border-white/12 px-4">
+                <a href="{{ route('dashboard') }}" class="flex items-center gap-3 min-w-0" aria-label="PHILCST IDMS Dashboard">
+                    <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white p-1 shadow-sm">
+                        <img src="{{ asset('images/philcst-seal.png') }}" alt="Philippine College of Science and Technology seal" class="h-full w-full object-contain">
+                    </span>
+                    <span class="sidebar-brand-copy min-w-0">
+                        <span class="block truncate text-[15px] font-bold tracking-tight text-white" style="font-family: var(--font-display)">PHILCST IDMS</span>
+                        <span class="block truncate text-[11px] font-medium text-purple-200/75">ID Monitoring System</span>
+                    </span>
+                </a>
+                <button id="sidebarPinButton" type="button" aria-label="Pin expanded sidebar" aria-pressed="false" title="Pin sidebar open"
+                    class="sidebar-pin-btn hidden h-7 w-7 shrink-0 items-center justify-center rounded-md text-purple-200/75 hover:bg-white/12 hover:text-white lg:inline-flex">
+                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M12 17v5M5 3h14l-3 6v4l2 2H6l2-2V9L5 3Z"/>
+                    </svg>
+                </button>
             </div>
-            <nav class="sidebar-nav" aria-label="Primary navigation">
-                <a class="{{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}" data-tooltip="Overview" title="Overview"><span class="nav-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span><span class="nav-label">Overview</span></a>
-                @if(auth()->user()->hasPermission('students.view'))<a class="{{ request()->routeIs('students.*') ? 'active' : '' }}" href="{{ route('students.index') }}" data-tooltip="Student Registry" title="Student Registry"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></span><span class="nav-label">Student Registry</span></a>@endif
-                @if(auth()->user()->hasPermission('imports.manage'))<a class="{{ request()->routeIs('imports.*') ? 'active' : '' }}" href="{{ route('imports.students.create') }}" data-tooltip="CSV Imports" title="CSV Imports"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M4 17V5a2 2 0 0 1 2-2h8l6 6v8a2 2 0 0 1-2 2h-2"/><path d="M14 3v6h6M3 14v7m0 0 3-3m-3 3-3-3"/></svg></span><span class="nav-label">CSV Imports</span></a>@endif
-                @if(auth()->user()->hasPermission('cards.view'))<a class="{{ request()->routeIs('production.*') ? 'active' : '' }}" href="{{ route('production.index') }}" data-tooltip="ID Production" title="ID Production"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v7H6z"/></svg></span><span class="nav-label">ID Production</span></a>@endif
-                @if(auth()->user()->hasPermission('cards.view'))<a class="{{ request()->routeIs('scanner.*') ? 'active' : '' }}" href="{{ route('scanner.index') }}" data-tooltip="QR Scanner" title="QR Scanner"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M4 4h5v5H4zM15 4h5v5h-5zM4 15h5v5H4zM15 15h2m3 0v5h-5m0-5v2m5-2h0"/></svg></span><span class="nav-label">QR Scanner</span></a>@endif
-                @if(auth()->user()->hasPermission('cards.release'))<a class="{{ request()->routeIs('scanner.*') ? 'active' : '' }}" href="{{ route('scanner.index') }}" data-tooltip="ID Releasing" title="ID Releasing"><span class="nav-icon"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><circle cx="12" cy="9" r="3"/><path d="M8 16h8"/></svg></span><span class="nav-label">ID Releasing</span></a>@endif
-                @if(auth()->user()->hasPermission('reports.view'))<a class="{{ request()->routeIs('reports.*') ? 'active' : '' }}" href="{{ route('reports.index') }}" data-tooltip="Reports &amp; Analytics" title="Reports &amp; Analytics"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M4 19V5m0 14h16M8 16v-4m4 4V8m4 8v-7m4 7V4"/></svg></span><span class="nav-label">Reports &amp; Analytics</span></a>@endif
-            </nav>
-            <div class="sidebar-secondary"><span>Administration</span>@if(auth()->user()->hasPermission('users.manage'))<a class="{{ request()->routeIs('users.*') ? 'active' : '' }}" href="{{ route('users.index') }}" data-tooltip="User Management" title="User Management"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6m-3-3h6"/></svg></span><span class="nav-label">User Management</span></a><a class="{{ request()->routeIs('holders.*') ? 'active' : '' }}" href="{{ route('holders.index') }}" data-tooltip="Legacy Access Directory" title="Legacy Access Directory"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.6 2.8 8.1 7 10 4.2-1.9 7-5.4 7-10V6l-7-3Z"/><path d="m9 12 2 2 4-5"/></svg></span><span class="nav-label">Legacy Access Directory</span></a>@endif @if(auth()->user()->hasPermission('audit.view'))<a class="{{ request()->routeIs('logs.*') ? 'active' : '' }}" href="{{ route('logs.index') }}" data-tooltip="Scan Activity" title="Scan Activity"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg></span><span class="nav-label">Scan Activity</span></a>@endif @if(auth()->user()->hasPermission('settings.manage'))<a class="{{ request()->routeIs('academic-terms.*') ? 'active' : '' }}" href="{{ route('academic-terms.index') }}" data-tooltip="Academic Terms" title="Academic Terms"><span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M7 3v3m10-3v3M4 9h16M5 5h14a1 1 0 0 1 1 1v14H4V6a1 1 0 0 1 1-1Z"/></svg></span><span class="nav-label">Academic Terms</span></a>@endif</div>
-            <div class="sidebar-user">
-                <div class="avatar">{{ strtoupper(substr(auth()->user()->name, 0, 1)) }}</div>
-                <div class="sidebar-user-copy"><strong title="{{ auth()->user()->name }}">{{ auth()->user()->name }}</strong><small title="{{ auth()->user()->email }}">{{ auth()->user()->email }}</small></div>
-                <form method="POST" action="{{ route('logout') }}">@csrf<button title="Log out" aria-label="Log out"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 17l5-5-5-5M15 12H3M14 3h5a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-5"/></svg><span>Log out</span></button></form>
-            </div>
-        </aside>
-        <button class="mobile-sidebar-backdrop" id="sidebarBackdrop" type="button" aria-label="Close navigation"></button>
-        <main class="main">
-            <button class="mobile-menu-button" id="mobileMenuButton" type="button" aria-controls="appSidebar" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg><span class="sr-only">Open navigation</span></button>
-            @if(!request()->routeIs('dashboard', 'students.index', 'imports.*', 'production.*', 'scanner.*', 'reports.*', 'users.*', 'academic-terms.*'))
-                <header class="topbar"><div><p class="eyebrow">PhilCST ID Monitoring &amp; Issuance</p><h1>@yield('heading', 'Dashboard')</h1></div><div class="live-clock" id="liveClock"></div></header>
-            @endif
-            <div class="active-term-strip" role="status">
-                <span>Active term</span>
-                @if($activeAcademicTerm)
-                    <strong>{{ $activeAcademicTerm->academicYear?->name }}  -  {{ $activeAcademicTerm->name }}</strong>
-                @else
-                    <strong>No active academic term</strong>
-                    @if(auth()->user()->hasPermission('settings.manage'))<a href="{{ route('academic-terms.index') }}">Configure term</a>@endif
+
+            <div class="flex-1 overflow-x-hidden overflow-y-auto px-3 py-4">
+                <p class="sidebar-group-label">Monitoring</p>
+                <nav class="sidebar-nav flex flex-col gap-1" aria-label="Primary navigation">
+                    <a class="{{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}" title="Dashboard">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+                        <span class="nav-label">Dashboard</span>
+                    </a>
+
+                    @if($user->hasPermission('students.view'))
+                        <a class="{{ request()->routeIs('students.*') ? 'active' : '' }}" href="{{ route('students.index') }}" title="Student Records">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                            <span class="nav-label">Student Records</span>
+                        </a>
+                    @endif
+
+                    @if($user->hasPermission('imports.manage'))
+                        <a class="{{ request()->routeIs('imports.*') ? 'active' : '' }}" href="{{ route('imports.students.create') }}" title="Import CSV">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0-4 4m4-4 4 4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+                            <span class="nav-label">Import CSV</span>
+                        </a>
+                    @endif
+
+                    @if($user->hasPermission('cards.view'))
+                        <a class="{{ $isPrintedView ? 'active' : '' }}" href="{{ route('production.index') }}" title="Printed IDs">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v7H6z"/></svg>
+                            <span class="nav-label">Printed IDs</span>
+                        </a>
+
+                        <a class="{{ $isReleasedView ? 'active' : '' }}" href="{{ route('production.index', ['status' => 'released']) }}" title="Released IDs">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 12 2 2 4-4"/><rect x="3" y="4" width="18" height="16" rx="2"/></svg>
+                            <span class="nav-label">Released IDs</span>
+                        </a>
+
+                        <a class="{{ request()->routeIs('scanner.*') ? 'active' : '' }}" href="{{ route('scanner.index') }}" title="ID Verification">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8V5a2 2 0 0 1 2-2h3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3M7 12h10"/></svg>
+                            <span class="nav-label">Verification</span>
+                        </a>
+                    @endif
+
+                    @if($user->hasPermission('reports.view'))
+                        <a class="{{ request()->routeIs('reports.*') ? 'active' : '' }}" href="{{ route('reports.index') }}" title="Reports">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5m0 14h16M8 16v-4m4 4V8m4 8v-7m4 7V4"/></svg>
+                            <span class="nav-label">Reports</span>
+                        </a>
+                    @endif
+                </nav>
+
+                @if($user->hasPermission('users.manage') || $user->hasPermission('settings.manage') || $user->hasPermission('audit.view'))
+                    <p class="sidebar-group-label mt-6">Administration</p>
+                    <nav class="sidebar-nav flex flex-col gap-1" aria-label="Administration navigation">
+                        @if($user->hasPermission('settings.manage'))
+                            <a class="{{ request()->routeIs('academic-terms.*') ? 'active' : '' }}" href="{{ route('academic-terms.index') }}" title="Academic Settings">
+                                <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg>
+                                <span class="nav-label">Academic Settings</span>
+                            </a>
+                        @endif
+                        @if($user->hasPermission('users.manage'))
+                            <a class="{{ request()->routeIs('users.*') ? 'active' : '' }}" href="{{ route('users.index') }}" title="Users">
+                                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6m-3-3h6"/></svg>
+                                <span class="nav-label">Users</span>
+                            </a>
+                        @endif
+                        @if($user->hasPermission('audit.view'))
+                            <a class="{{ request()->routeIs('logs.*') ? 'active' : '' }}" href="{{ route('logs.index') }}" title="Scan Activity">
+                                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg>
+                                <span class="nav-label">Scan Activity</span>
+                            </a>
+                        @endif
+                    </nav>
                 @endif
             </div>
-            <div class="content">
-                @if(session('success'))<div class="alert success">{{ session('success') }}</div>@endif
-                @yield('content')
+
+            <div class="border-t border-white/12 p-3">
+                <div class="flex items-center justify-between gap-2.5 rounded-xl bg-white/8 px-2 py-2">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                        <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#6D28D9] text-xs font-semibold text-white ring-1 ring-white/25">
+                            {{ strtoupper(substr($user->name, 0, 1)) }}
+                        </div>
+                        <div class="sidebar-user-copy min-w-0">
+                            <p class="truncate text-[13px] font-semibold text-white" title="{{ $user->name }}">{{ $user->name }}</p>
+                            <p class="truncate text-[11px] text-purple-200/75" title="{{ $user->email }}">{{ $user->email }}</p>
+                        </div>
+                    </div>
+                    <form method="POST" action="{{ route('logout') }}" class="sidebar-logout-form shrink-0">
+                        @csrf
+                        <button type="submit" title="Log out" aria-label="Log out"
+                            class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-purple-200/80 transition-colors hover:bg-white/12 hover:text-white">
+                            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M10 17l5-5-5-5M15 12H3M14 3h5a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-5"/>
+                            </svg>
+                        </button>
+                    </form>
+                </div>
             </div>
-        </main>
+        </aside>
+
+        {{-- Main content area with subtle PHILCST campus building backdrop --}}
+        <div class="app-main-shell campus-backdrop flex min-h-screen min-w-0 flex-col lg:pl-[72px]">
+            <header class="sticky top-0 z-20 flex h-16 items-center justify-between gap-4 border-b border-[#EAECF0] bg-white/95 px-4 backdrop-blur-xs sm:px-6 lg:px-8">
+                <div class="flex items-center gap-3 min-w-0">
+                    <button id="mobileMenuButton" type="button" aria-controls="appSidebar" aria-expanded="false" aria-label="Open navigation"
+                        class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[#D0D5DD] bg-white text-[#344054] hover:bg-[#F9FAFB] lg:hidden">
+                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" aria-hidden="true">
+                            <path d="M4 6h16M4 12h16M4 18h16"/>
+                        </svg>
+                    </button>
+
+                    <div class="flex items-center gap-2 text-sm min-w-0">
+                        <span class="hidden text-[#98A2B3] sm:inline">PHILCST</span>
+                        <span class="hidden text-[#D0D5DD] sm:inline">/</span>
+                        <span class="truncate font-semibold text-[#101828]">@yield('title', 'ID Monitoring')</span>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2.5 shrink-0 text-[13px]" role="status" aria-label="Active academic term">
+                    @if($activeAcademicTerm)
+                        <span class="inline-flex items-center gap-2 rounded-full border border-[#EAECF0] bg-[#F9FAFB] px-3 py-1 font-medium text-[#344054] num">
+                            <span class="h-1.5 w-1.5 rounded-full bg-[#12B76A]" aria-hidden="true"></span>
+                            <span>AY {{ $activeAcademicTerm->academicYear?->name ?? '-' }} &middot; {{ $activeAcademicTerm->name }}</span>
+                        </span>
+                        @if($user->hasPermission('settings.manage'))
+                            <a href="{{ route('academic-terms.index') }}" class="text-xs font-medium text-[#5B21B6] hover:underline">Settings</a>
+                        @endif
+                    @else
+                        <span class="inline-flex items-center gap-2 rounded-full border border-[#FEDF89] bg-[#FFFAEB] px-3 py-1 text-xs font-medium text-[#B54708]">
+                            <span class="h-1.5 w-1.5 rounded-full bg-[#F79009]" aria-hidden="true"></span>
+                            <span>No active academic term</span>
+                            @if($user->hasPermission('settings.manage'))
+                                <a href="{{ route('academic-terms.index') }}" class="ml-1 font-semibold underline">Configure</a>
+                            @endif
+                        </span>
+                    @endif
+                </div>
+            </header>
+
+            <main id="mainContent" class="mx-auto w-full max-w-[1480px] flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-7">
+                @if(session('success'))
+                    <div class="alert-banner success" role="status">{{ session('success') }}</div>
+                @endif
+                @yield('content')
+            </main>
+        </div>
     </div>
-    @if(!request()->routeIs('dashboard', 'students.index', 'imports.*', 'production.*', 'scanner.*', 'reports.*', 'users.*', 'academic-terms.*'))<script>const clock=document.getElementById('liveClock');const tick=()=>{if(clock)clock.textContent=new Intl.DateTimeFormat('en-PH',{dateStyle:'medium',timeStyle:'medium',timeZone:'Asia/Manila'}).format(new Date())};tick();setInterval(tick,1000);</script>@endif
+
     @stack('scripts')
     <script>
         (() => {
             const sidebar = document.getElementById('appSidebar');
-            const pin = document.getElementById('sidebarPin');
+            const pinButton = document.getElementById('sidebarPinButton');
             const mobileButton = document.getElementById('mobileMenuButton');
             const backdrop = document.getElementById('sidebarBackdrop');
-            const mobileQuery = window.matchMedia('(max-width: 760px)');
-            let closeTimer;
-            let pinned = localStorage.getItem('idms-sidebar-pinned') === 'true';
+            const desktopQuery = window.matchMedia('(min-width: 1024px)');
+            let retractTimer = null;
+            let pinned = localStorage.getItem('philcst-sidebar-pinned') === 'true';
 
-            const sync = () => {
-                document.body.classList.toggle('sidebar-pinned', pinned && !mobileQuery.matches);
-                pin.setAttribute('aria-pressed', String(pinned));
-                pin.setAttribute('aria-label', pinned ? 'Unpin sidebar' : 'Pin expanded sidebar');
-                pin.title = pinned ? 'Unpin sidebar' : 'Pin sidebar';
-            };
-            const open = () => { clearTimeout(closeTimer); document.body.classList.add('sidebar-expanded'); };
-            const close = (immediate = false) => {
-                if (pinned || mobileQuery.matches || sidebar.contains(document.activeElement)) return;
-                clearTimeout(closeTimer);
-                closeTimer = setTimeout(() => document.body.classList.remove('sidebar-expanded'), immediate ? 0 : 180);
-            };
-            const closeMobile = () => {
-                document.body.classList.remove('sidebar-mobile-open');
-                mobileButton.setAttribute('aria-expanded', 'false');
+            const syncPin = () => {
+                document.body.classList.toggle('sidebar-pinned', pinned && desktopQuery.matches);
+                if (pinButton) {
+                    pinButton.setAttribute('aria-pressed', String(pinned));
+                    pinButton.setAttribute('aria-label', pinned ? 'Unpin sidebar' : 'Pin expanded sidebar');
+                    pinButton.title = pinned ? 'Unpin sidebar' : 'Pin sidebar open';
+                }
             };
 
-            sidebar.addEventListener('pointerenter', () => { if (!mobileQuery.matches) open(); });
-            sidebar.addEventListener('pointerleave', () => close());
-            sidebar.addEventListener('focusin', () => { if (!mobileQuery.matches) open(); });
-            sidebar.addEventListener('focusout', () => requestAnimationFrame(() => close()));
-            pin.addEventListener('click', () => {
+            const expandHover = () => {
+                if (!desktopQuery.matches || pinned) return;
+                clearTimeout(retractTimer);
+                document.body.classList.add('sidebar-hover');
+            };
+
+            const retractHover = () => {
+                if (!desktopQuery.matches || pinned) return;
+                clearTimeout(retractTimer);
+                retractTimer = setTimeout(() => {
+                    if (!sidebar.contains(document.activeElement)) {
+                        document.body.classList.remove('sidebar-hover');
+                    }
+                }, 140);
+            };
+
+            sidebar?.addEventListener('pointerenter', expandHover);
+            sidebar?.addEventListener('pointerleave', retractHover);
+            sidebar?.addEventListener('focusin', expandHover);
+            sidebar?.addEventListener('focusout', () => requestAnimationFrame(retractHover));
+
+            pinButton?.addEventListener('click', () => {
                 pinned = !pinned;
-                localStorage.setItem('idms-sidebar-pinned', String(pinned));
-                if (pinned) open();
-                sync();
+                localStorage.setItem('philcst-sidebar-pinned', String(pinned));
+                if (!pinned) document.body.classList.remove('sidebar-hover');
+                syncPin();
             });
-            mobileButton.addEventListener('click', () => {
-                const openState = document.body.classList.toggle('sidebar-mobile-open');
-                mobileButton.setAttribute('aria-expanded', String(openState));
-                if (openState) sidebar.querySelector('a,button')?.focus();
+
+            const setMobileOpen = (open) => {
+                if (!sidebar || !backdrop || !mobileButton) return;
+                sidebar.classList.toggle('-translate-x-full', !open);
+                backdrop.classList.toggle('hidden', !open);
+                mobileButton.setAttribute('aria-expanded', String(open));
+            };
+
+            mobileButton?.addEventListener('click', () => setMobileOpen(sidebar.classList.contains('-translate-x-full')));
+            backdrop?.addEventListener('click', () => setMobileOpen(false));
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    setMobileOpen(false);
+                    if (!pinned) document.body.classList.remove('sidebar-hover');
+                }
             });
-            backdrop.addEventListener('click', closeMobile);
-            document.addEventListener('keydown', event => {
-                if (event.key !== 'Escape') return;
-                if (document.body.classList.contains('sidebar-mobile-open')) closeMobile();
-                else if (!pinned) { document.body.classList.remove('sidebar-expanded'); document.activeElement?.blur(); }
+            desktopQuery.addEventListener('change', () => {
+                setMobileOpen(false);
+                document.body.classList.remove('sidebar-hover');
+                syncPin();
             });
-            mobileQuery.addEventListener('change', () => { closeMobile(); document.body.classList.remove('sidebar-expanded'); sync(); });
-            sync();
+            syncPin();
         })();
     </script>
 </body>

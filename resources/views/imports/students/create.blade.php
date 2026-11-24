@@ -1,48 +1,119 @@
 @extends('layouts.app')
-@section('title', 'Import Enrollments')
+@section('title', 'Import CSV')
 @section('content')
 @php($activeTerms = $terms)
-<header class="page-header import-page-header">
-    <div><p class="eyebrow">Student Management</p><h1>Import Enrollments</h1><p class="page-description">Set the academic context, then upload an official enrollment CSV.</p></div>
-    <a class="import-back-link" href="{{ route('students.index') }}">Back to Registry</a>
-</header>
+
+<div class="mb-6 flex flex-wrap items-end justify-between gap-4">
+    <div>
+        <h1 class="page-title">Import Student Enrollments</h1>
+        <p class="page-subtitle">Set the active academic term context, then upload an official 9-column enrollment CSV.</p>
+    </div>
+    <div class="flex flex-wrap items-center gap-2.5">
+        <a class="btn secondary" href="{{ route('imports.students.template') }}">Download Template</a>
+        <a class="btn text" href="{{ route('students.index') }}">Back to Student Records</a>
+    </div>
+</div>
+
 @include('imports.students._steps', ['current' => 1])
-<section class="panel import-card term-upload-card">
-    <form action="{{ route('imports.students.preview') }}" method="POST" enctype="multipart/form-data" id="csvUploadForm" class="term-upload-form">@csrf
+
+<section class="surface max-w-4xl overflow-hidden">
+    <form action="{{ route('imports.students.preview') }}" method="POST" enctype="multipart/form-data" id="csvUploadForm">
+        @csrf
+
         @if($errors->any())
-            <div class="import-error-summary" role="alert"><strong>Check the information below.</strong><ul>@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>
+            <div class="border-b border-[#FECACA] bg-[#FEF2F2] px-6 py-4 text-sm text-[#991B1B]" role="alert">
+                <p class="font-semibold">Check the information below.</p>
+                <ul class="mt-1 list-disc pl-5 text-xs">
+                    @foreach($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
         @endif
 
-        <section class="import-section academic-context-section" aria-labelledby="academic-context-title">
-            <div class="import-section-heading"><div><p class="section-kicker">Import settings</p><h2 id="academic-context-title">Academic Context</h2><p>Choose the term and program coverage for every approved row.</p></div></div>
-            <div class="academic-context-grid">
-                <label class="context-field"><span>Active academic year and semester <b>*</b></span><select name="academic_term_id" id="academicTerm" required aria-describedby="academicTermHelp"><option value="">Select active term</option>@foreach($activeTerms as $term)<option value="{{ $term->id }}" @selected(old('academic_term_id') == $term->id)>AY {{ $term->academicYear->name }}  -  {{ $term->name }}</option>@endforeach</select><small id="academicTermHelp">Imports are applied only to the globally active academic term.</small></label>
-                <label class="context-field"><span>Import Coverage <b>*</b></span><select name="coverage" id="coverage" required><option value="all" @selected(old('coverage', 'all') === 'all')>All Programs in CSV</option><option value="specific" @selected(old('coverage') === 'specific')>Single Program</option></select><small>All Programs uses each validated row's mapped program.</small></label>
-                <label class="context-field" id="programField" hidden><span>Program <b>*</b></span><select name="coverage_program_id" id="coverageProgram"><option value="">Select official program</option>@foreach($programs as $program)<option value="{{ $program->id }}" @selected(old('coverage_program_id') == $program->id)>{{ $program->code }}  -  {{ $program->name }}</option>@endforeach</select><small>Rows with a different mapped program will be rejected.</small></label>
-            </div>
-        </section>
+        <div class="border-b border-[#E2E6EF] p-6">
+            <h2 id="academic-context-title" class="text-base font-semibold text-[#172033]">Academic Context</h2>
+            <p class="mt-0.5 text-sm text-[#64748B]">Choose the target term and program coverage for every approved row.</p>
 
-        <section class="import-section upload-csv-section" aria-labelledby="upload-csv-title">
-            <div class="import-section-heading upload-heading"><div><p class="section-kicker">Official data file</p><h2 id="upload-csv-title">Upload CSV</h2><p>Upload official student enrollment data.</p></div><a class="template-action" href="{{ route('imports.students.template') }}">Download Template</a></div>
-            <label class="csv-dropzone step-one-dropzone" for="csv" id="csvDropzone">
-                <span class="upload-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 16V4m0 0-4 4m4-4 4 4M5 15a4 4 0 0 0 1 7h12a4 4 0 0 0 1-7 7 7 0 0 0-13.5-2A4.5 4.5 0 0 0 5 15Z"/></svg></span>
-                <span class="dropzone-copy"><strong>Drop your CSV file here</strong><small>CSV only  -  Maximum {{ number_format($maxMegabytes) }} MB</small></span>
-                <span class="browse-action">Browse Files</span>
-                <input id="csv" type="file" name="csv" accept=".csv,text/csv" required>
+            <div class="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2">
+                <label class="block">
+                    <span class="mb-1.5 block text-[13.5px] font-medium text-[#334155]">Active academic year and semester <span class="text-[#B91C1C]">*</span></span>
+                    <select name="academic_term_id" id="academicTerm" required aria-describedby="academicTermHelp">
+                        <option value="">Select active term</option>
+                        @foreach($activeTerms as $term)
+                            <option value="{{ $term->id }}" @selected(old('academic_term_id', $activeTerms->count() === 1 ? $term->id : null) == $term->id)>AY {{ $term->academicYear->name }}  -  {{ $term->name }}</option>
+                        @endforeach
+                    </select>
+                    <span id="academicTermHelp" class="mt-1.5 block text-xs text-[#64748B]">Imports are applied only to the globally active academic term.</span>
+                </label>
+
+                <label class="block">
+                    <span class="mb-1.5 block text-[13.5px] font-medium text-[#334155]">Import Coverage <span class="text-[#B91C1C]">*</span></span>
+                    <select name="coverage" id="coverage" required>
+                        <option value="all" @selected(old('coverage', 'all') === 'all')>All Programs in CSV</option>
+                        <option value="specific" @selected(old('coverage') === 'specific')>Single Program</option>
+                    </select>
+                    <span class="mt-1.5 block text-xs text-[#64748B]">All Programs uses each validated row's mapped program.</span>
+                </label>
+
+                <label class="block sm:col-span-2" id="programField" hidden>
+                    <span class="mb-1.5 block text-[13.5px] font-medium text-[#334155]">Program <span class="text-[#B91C1C]">*</span></span>
+                    <select name="coverage_program_id" id="coverageProgram">
+                        <option value="">Select official program</option>
+                        @foreach($programs as $program)
+                            <option value="{{ $program->id }}" @selected(old('coverage_program_id') == $program->id)>{{ $program->code }} &middot; {{ $program->name }}</option>
+                        @endforeach
+                    </select>
+                    <span class="mt-1.5 block text-xs text-[#64748B]">Rows with a different mapped program will be rejected.</span>
+                </label>
+            </div>
+        </div>
+
+        <div class="p-6">
+            <h2 id="upload-csv-title" class="text-base font-semibold text-[#172033]">Upload CSV File</h2>
+            <p class="mt-0.5 text-sm text-[#64748B]">Official 9-column format: <span class="mono text-xs text-[#334155]">student_number, first_name, middle_name, last_name, suffix, program, year_level, academic_year, semester</span>.</p>
+
+            <label for="csv" id="csvDropzone"
+                class="mt-4 flex min-h-40 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[#CBD3E1] bg-[#F8F9FC] px-6 py-8 text-center transition-colors hover:border-[#6D28A8] hover:bg-[#F3ECFA]/50">
+                <span class="icon-well !h-11 !w-11 !rounded-xl" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><path d="M12 16V4m0 0-4 4m4-4 4 4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+                </span>
+                <span class="text-sm font-semibold text-[#172033]">Drop your CSV file here or click to browse</span>
+                <span class="text-xs text-[#64748B] num">CSV only &middot; Maximum {{ number_format($maxMegabytes) }} MB</span>
+                <input id="csv" type="file" name="csv" accept=".csv,text/csv" required class="sr-only">
             </label>
-            <div class="file-validation-message" id="fileValidationMessage" role="status" hidden></div>
-            <div class="selected-file step-one-selected-file" id="selectedFile" hidden>
-                <span class="selected-file-icon">CSV</span>
-                <div><strong id="selectedFileName"></strong><small id="selectedFileSize"></small><span class="file-status" id="selectedFileStatus">Ready to validate</span></div>
-                <button type="button" id="replaceFile">Replace</button><button type="button" id="removeFile">Remove</button>
-            </div>
-            <aside class="import-safety"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 5 6v5c0 4.6 2.8 8.1 7 10 4.2-1.9 7-5.4 7-10V6l-7-3Z"/><path d="m9 12 2 2 4-5"/></svg><div><strong>Import safety</strong><span>Preview and mapping do not change permanent records. Enrollment imports never print, release, replace, or revoke physical IDs.</span></div></aside>
-        </section>
 
-        <footer class="term-upload-actions"><a class="btn text" href="{{ route('students.index') }}">Cancel</a><button class="btn primary import-continue" type="submit" id="continueButton" disabled>Continue to Map Columns</button></footer>
+            <div id="fileValidationMessage" role="status" hidden class="mt-3 rounded-lg border border-[#FECACA] bg-[#FEF2F2] px-4 py-2.5 text-sm text-[#B91C1C]"></div>
+
+            <div id="selectedFile" hidden class="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[#E3D4F3] bg-[#F3ECFA]/50 px-4 py-3.5">
+                <div class="flex items-center gap-3 min-w-0">
+                    <span class="inline-flex h-10 w-11 shrink-0 items-center justify-center rounded-lg border border-[#E3D4F3] bg-white text-xs font-bold text-[#6D28A8]">CSV</span>
+                    <div class="min-w-0">
+                        <p id="selectedFileName" class="truncate text-sm font-semibold text-[#172033]"></p>
+                        <p class="text-xs text-[#64748B] num">
+                            <span id="selectedFileSize"></span> &middot; <span id="selectedFileStatus" class="font-semibold text-[#15803D]">Ready to validate</span>
+                        </p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button type="button" id="replaceFile" class="btn secondary btn-sm">Replace</button>
+                    <button type="button" id="removeFile" class="btn text btn-sm">Remove</button>
+                </div>
+            </div>
+
+            <p class="mt-4 rounded-lg border border-[#E2E6EF] bg-[#F8F9FC] px-4 py-3 text-xs leading-relaxed text-[#475569]">
+                <strong class="font-semibold text-[#172033]">Import safety:</strong> Preview and column mapping never modify permanent records. Enrollment imports never print, release, replace, or revoke physical IDs.
+            </p>
+        </div>
+
+        <footer class="flex items-center justify-end gap-2.5 border-t border-[#E2E6EF] bg-[#F8F9FC] px-6 py-4">
+            <a class="btn secondary" href="{{ route('students.index') }}">Cancel</a>
+            <button class="btn primary" type="submit" id="continueButton" disabled>Continue to Map Columns</button>
+        </footer>
     </form>
 </section>
 @endsection
+
 @push('scripts')
 <script>
 (() => {
@@ -91,8 +162,8 @@
     [term, coverage, program].forEach(element => element.addEventListener('change', sync));
     document.getElementById('removeFile').addEventListener('click', () => { input.value = ''; validFile = false; validateFile(); });
     document.getElementById('replaceFile').addEventListener('click', () => input.click());
-    ['dragenter', 'dragover'].forEach(name => dropzone.addEventListener(name, event => { event.preventDefault(); dropzone.classList.add('is-dragging'); }));
-    ['dragleave', 'drop'].forEach(name => dropzone.addEventListener(name, event => { event.preventDefault(); dropzone.classList.remove('is-dragging'); }));
+    ['dragenter', 'dragover'].forEach(name => dropzone.addEventListener(name, event => { event.preventDefault(); dropzone.classList.add('border-[#6D28A8]', 'bg-[#F3ECFA]'); }));
+    ['dragleave', 'drop'].forEach(name => dropzone.addEventListener(name, event => { event.preventDefault(); dropzone.classList.remove('border-[#6D28A8]', 'bg-[#F3ECFA]'); }));
     dropzone.addEventListener('drop', event => { if (event.dataTransfer.files.length) { input.files = event.dataTransfer.files; validateFile(); } });
     form.addEventListener('submit', event => {
         sync();

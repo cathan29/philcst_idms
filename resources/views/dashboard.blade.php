@@ -2,18 +2,226 @@
 @section('title', 'Dashboard')
 @section('heading', 'Dashboard')
 @section('content')
-<h1 class="sr-only">Dashboard</h1>
-<section class="dashboard-stat-grid" aria-label="IDMS summary metrics">
-    <article class="dashboard-stat stat-violet"><div class="stat-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 20v-1.5a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4V20m6-9a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm7-6a3 3 0 0 1 0 6m4 9v-1.5a4 4 0 0 0-3-3.87"/></svg></div><div><span>Total Students</span><strong>{{ number_format($totalStudents) }}</strong></div></article>
-    <article class="dashboard-stat stat-orange"><div class="stat-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v7H6v-7Zm12-5h.01"/></svg></div><div><span>Pending Printing</span><strong>{{ number_format($pendingPrinting) }}</strong></div></article>
-    <article class="dashboard-stat stat-blue"><div class="stat-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5 9-5Zm-9 9 9 5 9-5M3 17l9 5 9-5"/></svg></div><div><span>Ready for Release</span><strong>{{ number_format($readyForRelease) }}</strong></div></article>
-    <article class="dashboard-stat stat-success"><div class="stat-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8 12 2.5 2.5L16 9"/></svg></div><div><span>Released Today</span><strong>{{ number_format($releasedToday) }}</strong></div></article>
+@php
+    $enrolled = (int) ($summary['enrolled_students'] ?? $totalStudents);
+    $printedCards = (int) ($summary['printed_cards'] ?? 0);
+    $uniquePrinted = (int) ($summary['unique_students_printed'] ?? 0);
+    $releasedCards = (int) ($summary['released_cards'] ?? 0);
+    $uniqueReleased = (int) ($summary['unique_students_released'] ?? 0);
+    $remainingInOffice = (int) ($summary['printed_not_released'] ?? 0);
+    $withoutPrinted = (int) ($summary['students_without_printed'] ?? 0);
+    $withoutReleased = (int) ($summary['students_without_released'] ?? 0);
+
+    $printedPct = $enrolled > 0 ? min(100, round(($uniquePrinted / $enrolled) * 100)) : 0;
+    $releasedPct = $enrolled > 0 ? min(100, round(($uniqueReleased / $enrolled) * 100)) : 0;
+
+    $trendTotal = collect($trend)->sum('value');
+    $trendMax = max(1, (int) collect($trend)->max('value'));
+    $periodLabel = match ($period) {
+        'last7' => 'Last 7 Days',
+        'month' => 'This Month',
+        default => 'This Week',
+    };
+@endphp
+
+{{-- Institutional Campus Header --}}
+<section class="dashboard-campus-header mb-5 px-6 py-5">
+    <div class="flex flex-wrap items-center justify-between gap-4">
+        <div>
+            <p class="text-xs font-semibold uppercase tracking-wider text-[#5B21B6]">Philippine College of Science and Technology</p>
+            <h1 class="page-title mt-1">Dashboard</h1>
+            <p class="page-subtitle">
+                @if($activeTerm)
+                    Active term overview for <span class="font-medium text-[#101828] num">AY {{ $activeTerm->academicYear?->name }} &middot; {{ $activeTerm->name }}</span>.
+                @else
+                    Configure an active academic term in Academic Settings to begin operational tracking.
+                @endif
+            </p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2.5">
+            @if(auth()->user()->hasPermission('imports.manage'))
+                <a class="btn secondary" href="{{ route('imports.students.create') }}">Import CSV</a>
+            @endif
+            @if(auth()->user()->hasPermission('reports.view'))
+                <a class="btn secondary" href="{{ route('reports.index') }}">View Reports</a>
+            @endif
+            @if(auth()->user()->hasPermission('cards.view'))
+                <a class="btn primary" href="{{ route('scanner.index') }}">Open Verification</a>
+            @endif
+        </div>
+    </div>
 </section>
 
-<section class="dashboard-lower-grid">
-    <article class="dashboard-panel trend-panel"><div class="dashboard-panel-heading"><div><h2><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5m0 14h16M8 16v-4m4 4V8m4 8v-7m4 7V4"/></svg>ID Processing Trend</h2><p>Cards marked printed &middot; {{ str($period)->replace('last7', 'last 7 days')->replace('week', 'this week')->replace('month', 'this month')->title() }}</p></div><form method="GET"><label class="sr-only" for="period">Trend period</label><select id="period" name="period" onchange="this.form.submit()"><option value="week" @selected($period === 'week')>This Week</option><option value="last7" @selected($period === 'last7')>Last 7 Days</option><option value="month" @selected($period === 'month')>This Month</option></select></form></div><div class="trend-chart" data-values="{{ json_encode(collect($trend)->pluck('value')) }}"><div class="chart-y-axis"><span>{{ max(5, (int) ceil(collect($trend)->max('value') / 5) * 5) }}</span><span>{{ max(1, (int) ceil(collect($trend)->max('value') / 5) * 3) }}</span><span>{{ max(1, (int) ceil(collect($trend)->max('value') / 5) * 2) }}</span><span>0</span></div><div class="chart-plot"><div class="chart-gridlines"><i></i><i></i><i></i><i></i></div><div class="chart-bars">@php($maxTrend=max(1, collect($trend)->max('value')))<div class="chart-empty {{ collect($trend)->sum('value') > 0 ? 'is-hidden' : '' }}">No printing activity recorded for this period.</div>@foreach($trend as $day)<div class="chart-bar-column"><div class="chart-bar" style="--bar-height: {{ $day['value'] > 0 ? max(5, ($day['value'] / $maxTrend) * 100) : 0 }}%" title="{{ $day['value'] }} cards marked printed"><span>{{ $day['value'] ?: '' }}</span></div><small>{{ $day['label'] }}</small></div>@endforeach</div></div></div></article>
-    <article class="dashboard-panel activity-panel"><div class="dashboard-panel-heading"><div><h2><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 3 14h8l-1 8 11-13h-8l0-7Z"/></svg>Today's Activity</h2><p>Latest operational events</p></div></div><div class="activity-list">@forelse($activity as $event)<div class="activity-item"><span class="activity-icon activity-{{ $event['kind'] }}">@if($event['icon'] === 'upload')&#8593;@elseif($event['icon'] === 'print')&#9636;@elseif($event['icon'] === 'release')&#10003;@else!@endif</span><div><strong>{{ $event['label'] }}</strong><small>{{ $event['detail'] }}</small></div><time datetime="{{ $event['at']->toIso8601String() }}">{{ $event['at']->setTimezone(config('app.timezone'))->format('g:i A') }}</time></div>@empty<div class="activity-empty">No activity recorded today.</div>@endforelse</div></article>
+{{-- Unified 4-Column Hairline Metric Band --}}
+<section aria-label="Core issuance metrics" class="metric-strip mb-5 grid-cols-1 divide-y divide-[#E2E6ED] sm:grid-cols-2 sm:divide-y-0 sm:divide-x xl:grid-cols-4">
+    <div class="metric-cell">
+        <span class="kpi-label">Enrolled Students</span>
+        <p class="kpi-value">{{ number_format($enrolled) }}</p>
+        <p class="kpi-meta">Official active-term roster</p>
+    </div>
+    <div class="metric-cell">
+        <span class="kpi-label">Printed Physical IDs</span>
+        <p class="kpi-value">{{ number_format($printedCards) }}</p>
+        <p class="kpi-meta num">{{ number_format($uniquePrinted) }} unique students printed</p>
+    </div>
+    <div class="metric-cell">
+        <span class="kpi-label">Released Physical IDs</span>
+        <p class="kpi-value">{{ number_format($releasedCards) }}</p>
+        <p class="kpi-meta num">{{ number_format($uniqueReleased) }} unique students &middot; {{ number_format($releasedToday) }} today</p>
+    </div>
+    <div class="metric-cell">
+        <span class="kpi-label">Remaining in Office</span>
+        <p class="kpi-value">{{ number_format($remainingInOffice) }}</p>
+        <p class="kpi-meta">Printed cards awaiting claim</p>
+    </div>
 </section>
 
-<section class="quick-actions"><div><h2><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m13 2-2 7H5l6 4-2 9 2-7h6l-6-4 2-9Z"/></svg>Quick Actions</h2><p>Common operational tasks</p></div><div class="quick-action-buttons">@if(auth()->user()->hasPermission('imports.manage'))<a class="quick-action" href="{{ route('imports.students.create') }}"><span>&#8593;</span>Import CSV</a>@else<span class="quick-action disabled" aria-disabled="true"><span>&#8593;</span>Import CSV</span>@endif @if(auth()->user()->hasPermission('cards.view'))<a class="quick-action" href="{{ route('scanner.index') }}"><span>&#9638;</span>Open Scanner</a>@endif @if(auth()->user()->hasPermission('reports.view'))<a class="quick-action" href="{{ route('reports.index') }}"><span>&#9637;</span>View Reports</a>@endif</div></section>
+{{-- Issuance Progress & Queue Summary --}}
+<section class="surface mb-5 overflow-hidden" aria-label="Issuance progress and operational queue">
+    <div class="grid grid-cols-1 lg:grid-cols-12">
+        <div class="p-5 lg:col-span-7">
+            <div class="mb-4">
+                <h2 class="text-[15px] font-semibold text-[#111827]">Issuance Coverage</h2>
+                <p class="text-xs text-[#6B7280]">Unique enrolled students with printed and released physical IDs in the active term.</p>
+            </div>
+
+            <div class="space-y-4">
+                <div>
+                    <div class="mb-1.5 flex items-baseline justify-between text-sm">
+                        <span class="font-medium text-[#374151]">Printed Coverage</span>
+                        <span class="text-xs font-medium text-[#111827] num">{{ number_format($uniquePrinted) }} / {{ number_format($enrolled) }} <span class="text-[#6B7280]">({{ $printedPct }}%)</span></span>
+                    </div>
+                    <div class="h-2 w-full overflow-hidden rounded-full bg-[#F2F4F7]">
+                        <div class="h-full rounded-full bg-[#5B21B6]" style="width: {{ $printedPct }}%"></div>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="mb-1.5 flex items-baseline justify-between text-sm">
+                        <span class="font-medium text-[#344054]">Released Coverage</span>
+                        <span class="text-xs font-medium text-[#101828] num">{{ number_format($uniqueReleased) }} / {{ number_format($enrolled) }} <span class="text-[#667085]">({{ $releasedPct }}%)</span></span>
+                    </div>
+                    <div class="h-2 w-full overflow-hidden rounded-full bg-[#F2F4F7]">
+                        <div class="h-full rounded-full bg-[#12B76A]" style="width: {{ $releasedPct }}%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 divide-x divide-y divide-[#E2E6ED] border-t border-[#E2E6ED] bg-[#F9FAFB] lg:col-span-5 lg:border-t-0 lg:border-l">
+            <div class="p-4">
+                <p class="text-xs font-medium text-[#6B7280]">Without Printed ID</p>
+                <p class="mt-1 text-xl font-semibold text-[#111827] num">{{ number_format($withoutPrinted) }}</p>
+            </div>
+            <div class="p-4">
+                <p class="text-xs font-medium text-[#6B7280]">Without Released ID</p>
+                <p class="mt-1 text-xl font-semibold text-[#111827] num">{{ number_format($withoutReleased) }}</p>
+            </div>
+            <div class="p-4">
+                <p class="text-xs font-medium text-[#6B7280]">Pending Printing</p>
+                <p class="mt-1 text-xl font-semibold text-[#111827] num">{{ number_format($pendingPrinting) }}</p>
+            </div>
+            <div class="p-4">
+                <p class="text-xs font-medium text-[#6B7280]">Ready for Release</p>
+                <p class="mt-1 text-xl font-semibold text-[#111827] num">{{ number_format($readyForRelease) }}</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+{{-- Lower Operational Overview --}}
+<section class="grid grid-cols-1 gap-5 lg:grid-cols-12">
+    <article class="surface overflow-hidden lg:col-span-7">
+        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-[#E2E6ED] px-5 py-3.5">
+            <div>
+                <h2 class="text-[15px] font-semibold text-[#111827]">ID Processing Activity</h2>
+                <p class="text-xs text-[#6B7280]">Cards marked printed &middot; {{ $periodLabel }} (<span class="font-medium text-[#111827] num">{{ number_format($trendTotal) }}</span> total)</p>
+            </div>
+            <form method="GET" class="w-36">
+                <label class="sr-only" for="period">Trend period</label>
+                <select id="period" name="period" onchange="this.form.submit()" class="min-h-8 py-1 text-xs">
+                    <option value="week" @selected($period === 'week')>This Week</option>
+                    <option value="last7" @selected($period === 'last7')>Last 7 Days</option>
+                    <option value="month" @selected($period === 'month')>This Month</option>
+                </select>
+            </form>
+        </div>
+
+        @if($trendTotal === 0)
+            <div class="px-5 py-10 text-center">
+                <p class="text-sm font-medium text-[#111827]">No printing activity recorded for {{ strtolower($periodLabel) }}</p>
+                <p class="mt-1 text-xs text-[#6B7280]">Daily totals appear here as physical ID cards are confirmed printed.</p>
+                @if(auth()->user()->hasPermission('cards.view'))
+                    <a href="{{ route('production.index') }}" class="btn secondary btn-sm mt-3.5">Open Printed IDs</a>
+                @endif
+            </div>
+        @else
+            <div class="data-table-wrap max-h-80 overflow-y-auto">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Day</th>
+                            <th class="w-full">Daily Volume</th>
+                            <th class="text-right">Printed</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($trend as $day)
+                            <tr>
+                                <td class="whitespace-nowrap font-medium text-[#374151]">{{ $day['label'] }}</td>
+                                <td>
+                                    <div class="h-2 w-full overflow-hidden rounded-sm bg-[#EEF0F4]">
+                                        <div class="h-full rounded-sm bg-[#3F1B68]" style="width: {{ $day['value'] > 0 ? max(4, round(($day['value'] / $trendMax) * 100)) : 0 }}%"></div>
+                                    </div>
+                                </td>
+                                <td class="text-right font-semibold text-[#111827] num">{{ number_format($day['value']) }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @endif
+    </article>
+
+    <article class="surface overflow-hidden lg:col-span-5">
+        <div class="flex items-center justify-between gap-3 border-b border-[#E2E6ED] px-5 py-3.5">
+            <div>
+                <h2 class="text-[15px] font-semibold text-[#111827]">Recent Activity</h2>
+                <p class="text-xs text-[#6B7280]">Latest active-term operational events</p>
+            </div>
+            @if(auth()->user()->hasPermission('audit.view'))
+                <a href="{{ route('logs.index') }}" class="text-xs font-medium text-[#3F1B68] hover:underline">View all</a>
+            @endif
+        </div>
+
+        <div class="divide-y divide-[#EEF0F4]">
+            @forelse($activity as $event)
+                @php
+                    $dotColor = match ($event['kind']) {
+                        'success' => 'bg-[#16A34A]',
+                        'warning' => 'bg-[#DC2626]',
+                        default => 'bg-[#0284C7]',
+                    };
+                @endphp
+                <div class="flex items-center justify-between gap-3 px-5 py-3 hover:bg-[#FAFBFD]">
+                    <div class="flex items-start gap-2.5 min-w-0">
+                        <span class="mt-1.5 h-2 w-2 shrink-0 rounded-full {{ $dotColor }}" aria-hidden="true"></span>
+                        <div class="min-w-0">
+                            <p class="text-sm font-medium text-[#111827]">{{ $event['label'] }}</p>
+                            <p class="truncate text-xs text-[#6B7280]">{{ $event['detail'] }}</p>
+                        </div>
+                    </div>
+                    <time datetime="{{ $event['at']->toIso8601String() }}" class="shrink-0 text-xs text-[#6B7280] num">
+                        {{ $event['at']->setTimezone(config('app.timezone'))->format('g:i A') }}
+                    </time>
+                </div>
+            @empty
+                <div class="px-5 py-10 text-center">
+                    <p class="text-sm font-medium text-[#111827]">No activity recorded today</p>
+                    <p class="mt-1 text-xs text-[#6B7280]">CSV imports, printing confirmations, and ID releases appear here.</p>
+                </div>
+            @endforelse
+        </div>
+    </article>
+</section>
 @endsection

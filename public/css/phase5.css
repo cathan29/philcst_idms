@@ -1,0 +1,326 @@
+@import url("phase5-components.css");
+@import url("phase5-responsive.css");
+
+:root {
+    --p5-brand-950: #241036;
+    --p5-brand-900: #351653;
+    --p5-brand-800: #48206d;
+    --p5-brand-700: #5a2a82;
+    --p5-brand-100: #eee8f3;
+    --p5-gold: #c79a2b;
+    --p5-ink: #172033;
+    --p5-text: #344054;
+    --p5-muted: #667085;
+    --p5-border: #d7dce3;
+    --p5-border-strong: #bec6d0;
+    --p5-canvas: #f3f5f7;
+    --p5-surface: #ffffff;
+    --p5-surface-subtle: #f8f9fa;
+    --p5-success: #157347;
+    --p5-warning: #9a6700;
+    --p5-danger: #b42318;
+    --p5-info: #175cd3;
+    --p5-radius: 6px;
+    --p5-control: 40px;
+    --p5-sidebar: 244px;
+}
+
+* { box-sizing: border-box; }
+
+html {
+    background: var(--p5-canvas);
+    overflow-x: hidden;
+}
+
+body {
+    background: var(--p5-canvas);
+    color: var(--p5-text);
+    font-family: Manrope, "Segoe UI", Arial, sans-serif;
+    line-height: 1.45;
+}
+
+a, button, summary, select, input[type="checkbox"], input[type="radio"] { cursor: pointer; }
+button:disabled, input:disabled, select:disabled, [aria-disabled="true"] { cursor: not-allowed; }
+
+:focus-visible {
+    outline: 3px solid rgba(199, 154, 43, .75);
+    outline-offset: 2px;
+}
+
+.skip-link {
+    position: fixed;
+    z-index: 1000;
+    top: 8px;
+    left: 8px;
+    padding: 10px 14px;
+    border-radius: 4px;
+    background: #fff;
+    color: var(--p5-brand-900);
+    font-weight: 800;
+    transform: translateY(-150%);
+}
+
+.skip-link:focus { transform: translateY(0); }
+.app-shell { display: block; min-height: 100vh; }
+
+.sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 40;
+    width: var(--p5-sidebar);
+    min-width: var(--p5-sidebar);
+    padding: 0;
+    overflow-y: auto;
+    border-right: 1px solid rgba(255,255,255,.12);
+    background: var(--p5-brand-950);
+    box-shadow: none;
+}
+
+.sidebar-campus, .sidebar-pin { display: none !important; }
+
+.sidebar-brand-row {
+    min-height: 82px;
+    padding: 15px 18px;
+    border-bottom: 1px solid rgba(255,255,255,.12);
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    width: 100%;
+    color: #fff;
+}
+
+.brand-logo { width: 42px; height: 42px; flex: 0 0 42px; }
+
+.brand span, .brand strong, .brand small {
+    display: block !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+.brand strong { font-size: 13px; letter-spacing: .01em; }
+.brand small { margin-top: 3px; color: rgba(255,255,255,.65); font-size: 9px; font-weight: 600; line-height: 1.35; }
+
+.sidebar-nav {
+    display: grid;
+    gap: 2px;
+    padding: 18px 12px 10px;
+}
+
+.sidebar-nav::before {
+    content: "Monitoring";
+    padding: 0 10px 8px;
+    color: rgba(255,255,255,.48);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+}
+
+.sidebar-nav a, .sidebar-secondary a {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    min-height: 40px;
+    padding: 8px 10px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    color: rgba(255,255,255,.78);
+    font-size: 11px;
+    font-weight: 700;
+    transition: background-color .14s ease, color .14s ease;
+}
+
+.sidebar-nav a:hover, .sidebar-secondary a:hover { background: rgba(255,255,255,.07); color: #fff; }
+
+.sidebar-nav a.active, .sidebar-secondary a.active {
+    border-color: rgba(255,255,255,.1);
+    background: rgba(255,255,255,.11);
+    color: #fff;
+}
+
+.sidebar-nav a.active::before, .sidebar-secondary a.active::before {
+    content: "";
+    position: absolute;
+    inset: 7px auto 7px -12px;
+    width: 3px;
+    background: var(--p5-gold);
+}
+
+.nav-icon { width: 18px; height: 18px; flex: 0 0 18px; }
+.nav-icon svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.7; }
+
+.nav-label {
+    display: inline !important;
+    overflow: visible !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    white-space: normal;
+}
+
+.sidebar-secondary {
+    display: grid;
+    gap: 2px;
+    margin-top: 6px;
+    padding: 14px 12px 92px;
+    border-top: 1px solid rgba(255,255,255,.1);
+}
+
+.sidebar-secondary > span {
+    padding: 0 10px 8px;
+    color: rgba(255,255,255,.48);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+}
+
+.sidebar-user {
+    position: fixed;
+    z-index: 2;
+    bottom: 0;
+    left: 0;
+    display: grid;
+    grid-template-columns: 34px minmax(0,1fr) auto;
+    align-items: center;
+    gap: 9px;
+    width: var(--p5-sidebar);
+    min-height: 70px;
+    padding: 12px 14px;
+    border-top: 1px solid rgba(255,255,255,.12);
+    background: var(--p5-brand-950);
+}
+
+.sidebar-user .avatar { width: 34px; height: 34px; border-radius: 4px; background: var(--p5-brand-700); color: #fff; }
+.sidebar-user-copy { min-width: 0; }
+
+.sidebar-user-copy strong, .sidebar-user-copy small {
+    display: block !important;
+    overflow: hidden;
+    color: #fff;
+    opacity: 1 !important;
+    text-overflow: ellipsis;
+    visibility: visible !important;
+    white-space: nowrap;
+}
+
+.sidebar-user-copy strong { font-size: 10px; }
+.sidebar-user-copy small { margin-top: 2px; color: rgba(255,255,255,.58); font-size: 8px; }
+.sidebar-user button { min-width: 34px; min-height: 34px; border-radius: 4px; }
+.sidebar-user button span { display: none; }
+
+.main {
+    width: auto;
+    min-width: 0;
+    min-height: 100vh;
+    margin-left: var(--p5-sidebar);
+    background: var(--p5-canvas);
+}
+
+.active-term-strip {
+    position: sticky;
+    z-index: 25;
+    top: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 48px;
+    padding: 0 28px;
+    border-bottom: 1px solid var(--p5-border);
+    background: rgba(255,255,255,.97);
+    color: var(--p5-muted);
+    box-shadow: none;
+}
+
+.active-term-strip span { font-size: 9px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; }
+.active-term-strip strong { color: var(--p5-ink); font-size: 11px; font-weight: 800; }
+
+.active-term-strip strong::before {
+    content: "";
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    margin-right: 7px;
+    border-radius: 50%;
+    background: var(--p5-success);
+}
+
+.content { width: 100%; max-width: none; padding: 24px 28px 40px; }
+
+/* Retire the legacy collapsed navigation rail without changing its JavaScript API. */
+.has-navigation-rail .app-shell { display: block; }
+.has-navigation-rail .main { grid-column: auto; width: auto; }
+
+.has-navigation-rail:not(.sidebar-expanded):not(.sidebar-pinned) .sidebar {
+    width: var(--p5-sidebar);
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+.has-navigation-rail:not(.sidebar-expanded):not(.sidebar-pinned) .brand {
+    width: 100%;
+    min-width: 0;
+    justify-content: flex-start;
+    padding: 0;
+}
+
+.has-navigation-rail:not(.sidebar-expanded):not(.sidebar-pinned) .brand > span,
+.has-navigation-rail:not(.sidebar-expanded):not(.sidebar-pinned) .nav-label,
+.has-navigation-rail:not(.sidebar-expanded):not(.sidebar-pinned) .sidebar-secondary > span,
+.has-navigation-rail:not(.sidebar-expanded):not(.sidebar-pinned) .sidebar-user-copy,
+.has-navigation-rail:not(.sidebar-expanded):not(.sidebar-pinned) .sidebar-user form {
+    display: block !important;
+    opacity: 1;
+    pointer-events: auto;
+    transform: none;
+}
+
+.has-navigation-rail:not(.sidebar-expanded):not(.sidebar-pinned) .nav-label {
+    display: inline !important;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden !important;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.has-navigation-rail:not(.sidebar-expanded):not(.sidebar-pinned) .sidebar-nav,
+.has-navigation-rail:not(.sidebar-expanded):not(.sidebar-pinned) .sidebar-secondary {
+    width: auto;
+    min-width: 0;
+    margin-right: 0;
+    margin-left: 0;
+    overflow: visible;
+}
+
+.has-navigation-rail:not(.sidebar-expanded):not(.sidebar-pinned) .sidebar-nav a,
+.has-navigation-rail:not(.sidebar-expanded):not(.sidebar-pinned) .sidebar-nav .nav-disabled,
+.has-navigation-rail:not(.sidebar-expanded):not(.sidebar-pinned) .sidebar-secondary a {
+    width: auto;
+    min-width: 0;
+    justify-content: flex-start;
+    flex-direction: row;
+    gap: 11px;
+    padding: 8px 10px;
+    overflow: visible;
+    display: flex;
+    font-size: 11px;
+}
+
+.has-navigation-rail:not(.sidebar-expanded):not(.sidebar-pinned) .sidebar-user {
+    width: var(--p5-sidebar);
+    min-width: 0;
+    margin: 0;
+    padding: 12px 14px;
+}
+
+@media (min-width: 901px) and (max-width: 1180px) {
+    :root { --p5-sidebar: 216px; }
+}
+
+@media (max-width: 900px) {
+    :root { --p5-sidebar: min(276px, 86vw); }
+}

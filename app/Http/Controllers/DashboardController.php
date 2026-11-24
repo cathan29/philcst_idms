@@ -9,16 +9,23 @@ use App\Models\ImportBatch;
 use App\Models\ScanLog;
 use App\Models\Student;
 use App\Services\ActiveAcademicTerm;
+use App\Services\OperationalReportService;
 use Carbon\CarbonPeriod;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
-    public function index(Request $request, ActiveAcademicTerm $activeTerms): View
+    public function index(Request $request, ActiveAcademicTerm $activeTerms, OperationalReportService $reports): View
     {
         $activeTerm = $activeTerms->current();
         $termId = $activeTerm?->id ?? 0;
+        $summary = $activeTerm
+            ? $reports->summary($activeTerm->id)
+            : array_fill_keys([
+                'enrolled_students', 'printed_cards', 'released_cards', 'printed_not_released',
+                'unique_students_printed', 'students_without_printed', 'unique_students_released', 'students_without_released',
+            ], 0);
         $period = $request->validate(['period' => ['nullable', 'in:week,last7,month']])['period'] ?? 'week';
         $end = now()->endOfDay();
         $start = match ($period) {
@@ -77,6 +84,7 @@ class DashboardController extends Controller
         return view('dashboard', [
             'firstName' => str((string) $request->user()->name)->before(' ')->toString() ?: $request->user()->name,
             'activeTerm' => $activeTerm,
+            'summary' => $summary,
             'totalStudents' => Student::query()->whereHas('enrollments', fn ($query) => $query->where('academic_term_id', $termId))->count(),
             'pendingPrinting' => (clone $cards)->whereIn('status', ['pending', 'for_printing'])->count(),
             'readyForRelease' => (clone $cards)->where('status', 'ready_for_release')->count(),

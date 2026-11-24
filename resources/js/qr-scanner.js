@@ -78,19 +78,122 @@ import QrScanner from 'qr-scanner';
 
     const render = data => {
         lastResult = data;
-        if (!data.card) {
-            const title = data.result === 'not_found' ? 'ID not found' : data.result === 'invalid' ? 'Invalid identifier' : String(data.result || 'error').replaceAll('_', ' ');
-            result.innerHTML = `<div class="scanner-empty scanner-diagnostic is-${esc(data.result || 'error')}"><h2>${esc(title)}</h2><p>${esc(data.message)}</p></div>`;
-            return;
-        }
         const enrollment = data.enrollment || {};
         const lifecycle = data.lifecycle || {};
+        result.classList.remove('justify-center');
+
+        if (!data.card) {
+            if (data.student) {
+                result.innerHTML = `
+                    <div class="verification-card">
+                        <div class="verification-header">
+                            <div>
+                                <p class="text-[11px] font-semibold uppercase tracking-wider text-[#6B7280]">Verified Student</p>
+                                <h2 class="mt-0.5 text-xl font-bold tracking-tight text-[#172033]">${esc(data.student.name)}</h2>
+                                <p class="mt-0.5 mono text-sm font-medium text-[#475569]">${esc(data.student.student_number)}</p>
+                            </div>
+                            <span class="badge badge-warning">No Physical ID</span>
+                        </div>
+                        <div class="verification-states">
+                            <div class="verification-state-box">
+                                <span class="verification-state-label">1. Enrollment</span>
+                                <span class="badge badge-success w-fit">Enrolled</span>
+                                <p class="text-sm font-medium text-[#172033]">${esc([enrollment.program, enrollment.year_level].filter(Boolean).join(' · ') || 'Not recorded')}</p>
+                                <p class="text-xs text-[#64748B] num">${esc(enrollment.term || 'Active term')}</p>
+                            </div>
+                            <div class="verification-state-box">
+                                <span class="verification-state-label">2. Printed Status</span>
+                                <span class="badge badge-neutral w-fit">Not Printed</span>
+                                <p class="text-xs text-[#64748B]">No physical card record found for this term.</p>
+                            </div>
+                            <div class="verification-state-box">
+                                <span class="verification-state-label">3. Released Status</span>
+                                <span class="badge badge-neutral w-fit">Not Released</span>
+                                <p class="text-xs text-[#64748B]">Awaiting card production.</p>
+                            </div>
+                        </div>
+                        <p class="text-sm text-[#475569]">${esc(data.message)}</p>
+                    </div>`;
+                return;
+            }
+            result.classList.add('justify-center');
+            const title = data.result === 'not_found' ? 'ID not found' : data.result === 'invalid' ? 'Invalid identifier' : String(data.result || 'error').replaceAll('_', ' ');
+            const tone = data.result === 'not_found' ? 'badge-warning' : 'badge-danger';
+            result.innerHTML = `<div class="mx-auto flex max-w-md flex-col items-center justify-center py-8 text-center"><span class="badge ${tone} mb-3">${esc(title)}</span><p class="text-sm text-[#475569]">${esc(data.message)}</p></div>`;
+            return;
+        }
+
+        const isPrinted = Boolean(lifecycle.printed_at) || ['printed', 'ready_for_release', 'released'].includes(data.card.status);
+        const isReleased = data.card.status === 'released' || Boolean(lifecycle.released_at);
+        const isReady = data.card.status === 'ready_for_release';
+
+        const printedBadge = isPrinted
+            ? '<span class="badge badge-info w-fit">Printed</span>'
+            : `<span class="badge status-${esc(data.card.status)} w-fit">${esc(data.card.status_label)}</span>`;
+
+        const releasedBadge = isReleased
+            ? '<span class="badge badge-success w-fit">Released</span>'
+            : isReady
+                ? '<span class="badge badge-warning w-fit">Ready · Unclaimed</span>'
+                : '<span class="badge badge-neutral w-fit">Not Released</span>';
+
         const discrepancies = data.discrepancies || [];
         const history = data.history || [];
-        const issueMarkup = discrepancies.length ? `<div class="verification-alert" role="alert"><strong>Record discrepancy${discrepancies.length === 1 ? '' : 'ies'} detected</strong><ul>${discrepancies.map(issue => `<li>${esc(issue)}</li>`).join('')}</ul></div>` : '';
-        const historyMarkup = history.length ? `<div class="verification-history"><h3>ID transaction history</h3><ol>${history.map(item => `<li><span><strong>${esc(String(item.new_status).replaceAll('_', ' '))}</strong>${item.reason ? `<br><span>${esc(item.reason)}</span>` : ''}</span><small>${esc(item.occurred_at)}<br>${esc(item.actor)}</small></li>`).join('')}</ol></div>` : '<div class="verification-history"><h3>ID transaction history</h3><p>No status history has been recorded for this issuance.</p></div>';
         const cards = data.cards || [];
-        const cardsMarkup = cards.length ? `<div class="verification-history physical-card-history"><h3>Physical cards for this term</h3><ol>${cards.map(item => `<li><span><strong>Card #${esc(item.id)}  -  ${esc(item.issuance_type)}</strong><br><span>Printed: ${esc(item.printed_at || 'Not recorded')}</span></span><small>${esc(item.status_label)}<br>${item.released_at ? `Released ${esc(item.released_at)}` : 'Not released'}</small></li>`).join('')}</ol></div>` : '';        result.innerHTML = `<div class="verification-card"><div class="verification-heading"><div><p class="eyebrow">Verification Result</p><h2>${esc(data.student.name)}</h2><span>${esc(data.student.student_number)}</span></div><span class="card-status status-${esc(data.card.status)}">${esc(data.card.status_label)}</span></div><dl class="verification-details"><div><dt>Program and year level</dt><dd>${esc([enrollment.program, enrollment.year_level].filter(Boolean).join('  -  ') || 'Not recorded')}</dd></div><div><dt>Academic term</dt><dd>${esc(enrollment.term || 'Not recorded')}</dd></div><div><dt>ID issuance</dt><dd>${esc(data.card.issuance_type || 'Not recorded')}</dd></div><div><dt>Last status update</dt><dd>${esc(data.card.last_updated || 'Not recorded')}</dd></div></dl><dl class="verification-evidence"><div><dt>Printed</dt><dd>${esc(lifecycle.printed_at || 'Not recorded')}</dd><small>${esc(lifecycle.printed_by || '')}</small></div><div><dt>Ready for release</dt><dd>${esc(lifecycle.ready_at || 'Not recorded')}</dd></div><div><dt>Released</dt><dd>${esc(lifecycle.released_at || 'Not released')}</dd><small>${esc(lifecycle.released_by || '')}</small></div><div><dt>Production started</dt><dd>${esc(lifecycle.printing_started_at || 'Not recorded')}</dd></div></dl><p class="verification-message">${esc(data.message)}</p>${issueMarkup}${cardsMarkup}${historyMarkup}<div class="scanner-result-actions">${actionFor(data.card)}</div></div>`;
+
+        const issueMarkup = discrepancies.length
+            ? `<div class="verification-alert" role="alert"><strong>Record discrepancy${discrepancies.length === 1 ? '' : 'ies'} detected</strong><ul>${discrepancies.map(issue => `<li>${esc(issue)}</li>`).join('')}</ul></div>`
+            : '';
+
+        const cardsMarkup = cards.length
+            ? `<div class="verification-history physical-card-history"><h3>Physical cards for this term (${cards.length})</h3><ol>${cards.map(item => `<li><span><strong class="mono text-[#172033]">#${esc(item.id)}</strong> &middot; <span class="font-medium text-[#334155]">${esc(item.issuance_type)}</span><br><span class="text-xs text-[#64748B] num">Printed: ${esc(item.printed_at || 'Not recorded')}</span></span><small><strong class="text-[#334155]">${esc(item.status_label)}</strong><br>${item.released_at ? `Released ${esc(item.released_at)}` : 'Not released'}</small></li>`).join('')}</ol></div>`
+            : '';
+
+        const historyMarkup = history.length
+            ? `<div class="verification-history"><h3>Transaction history</h3><ol>${history.map(item => `<li><span><strong class="capitalize text-[#172033]">${esc(String(item.new_status).replaceAll('_', ' '))}</strong>${item.reason ? `<br><span class="text-xs text-[#64748B]">${esc(item.reason)}</span>` : ''}</span><small>${esc(item.occurred_at)}<br>${esc(item.actor)}</small></li>`).join('')}</ol></div>`
+            : '<div class="verification-history"><h3>Transaction history</h3><p class="text-xs text-[#64748B]">No status history has been recorded for this issuance.</p></div>';
+
+        result.innerHTML = `
+            <div class="verification-card">
+                <div class="verification-header">
+                    <div>
+                        <p class="text-[11px] font-semibold uppercase tracking-wider text-[#6B7280]">Verified Student Identity</p>
+                        <h2 class="mt-0.5 text-xl font-bold tracking-tight text-[#172033]">${esc(data.student.name)}</h2>
+                        <p class="mt-0.5 mono text-sm font-medium text-[#475569]">${esc(data.student.student_number)}</p>
+                    </div>
+                    <span class="badge status-${esc(data.card.status)}">${esc(data.card.status_label)}</span>
+                </div>
+
+                <div class="verification-states">
+                    <div class="verification-state-box">
+                        <span class="verification-state-label">1. Enrollment</span>
+                        <span class="badge badge-success w-fit">Enrolled</span>
+                        <p class="text-sm font-medium text-[#172033]">${esc([enrollment.program, enrollment.year_level].filter(Boolean).join(' · ') || 'Not recorded')}</p>
+                        <p class="text-xs text-[#64748B] num">${esc(enrollment.term || 'Not recorded')}</p>
+                    </div>
+
+                    <div class="verification-state-box">
+                        <span class="verification-state-label">2. Printed Status</span>
+                        ${printedBadge}
+                        <p class="text-sm font-medium text-[#172033] num">${esc(lifecycle.printed_at || 'Not recorded')}</p>
+                        <p class="text-xs text-[#64748B]">${esc(data.card.issuance_type || 'Initial')}${lifecycle.printed_by ? ` &middot; ${esc(lifecycle.printed_by)}` : ''}</p>
+                    </div>
+
+                    <div class="verification-state-box">
+                        <span class="verification-state-label">3. Released Status</span>
+                        ${releasedBadge}
+                        <p class="text-sm font-medium text-[#172033] num">${esc(lifecycle.released_at || 'Not released')}</p>
+                        <p class="text-xs text-[#64748B]">${esc(lifecycle.released_by || (isReady ? 'Ready for student claim' : 'Awaiting release'))}</p>
+                    </div>
+                </div>
+
+                <p class="text-sm text-[#475569]">${esc(data.message)}</p>
+                ${issueMarkup}
+                <div class="scanner-result-actions">${actionFor(data.card)}</div>
+                ${cardsMarkup}
+                ${historyMarkup}
+            </div>`;
+
         result.querySelector('.scanner-action')?.addEventListener('click', event => transition(data.card.id, event.currentTarget.dataset.target));
     };
 
@@ -190,6 +293,7 @@ import QrScanner from 'qr-scanner';
             qrImageInput.value = '';
         }
     };
+
     const requestReleaseEvidence = () => new Promise(resolve => {
         pendingReleaseResolve = resolve;
         releaseForm.reset();
@@ -250,17 +354,20 @@ import QrScanner from 'qr-scanner';
             release_remarks: document.getElementById('releaseRemarks').value.trim() || null,
         });
     });
+
     const cancelRelease = () => {
         const resolve = pendingReleaseResolve;
         pendingReleaseResolve = null;
         if (releaseDialog.open) releaseDialog.close();
         resolve?.(null);
     };
+
     cancelReleaseButton.addEventListener('click', cancelRelease);
     releaseDialog.addEventListener('cancel', event => {
         event.preventDefault();
         cancelRelease();
     });
+
     form.addEventListener('submit', event => {
         event.preventDefault();
         if (currentState === STATES.VERIFYING || confirmationOpen) return;
@@ -268,6 +375,7 @@ import QrScanner from 'qr-scanner';
         if (!payload) { setState(STATES.INVALID, 'Enter or scan an identifier before verification.'); input.focus(); return; }
         verifyPayload(payload);
     });
+
     startCameraButton.addEventListener('click', startCamera);
     stopCameraButton.addEventListener('click', stopCamera);
     qrImageInput.addEventListener('change', event => scanImage(event.target.files?.[0]));

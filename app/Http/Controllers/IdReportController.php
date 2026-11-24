@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\CardStatus;
+use App\Enums\SemesterCode;
 
 use App\Models\StudentEnrollment;
 use App\Services\ActiveAcademicTerm;
@@ -104,6 +105,10 @@ class IdReportController extends Controller
                 ->orWhere('first_name', 'like', '%'.addcslashes($value, '%_\\').'%')
                 ->orWhere('last_name', 'like', '%'.addcslashes($value, '%_\\').'%'));
         });
+        $query->when($filters['semester'] ?? null, function (Builder $query, string $value): void {
+            $code = SemesterCode::fromInput($value)->databaseCode();
+            $query->whereHas('academicTerm', fn (Builder $term) => $term->where('code', $code));
+        });
         if (! $isEnrollment) {
             $query->when($filters['status'] ?? null, fn (Builder $query, string $value) => $query->where('status', $value))
                 ->when($filters['date_from'] ?? null, fn (Builder $query, string $value) => $query->whereDate('printed_at', '>=', $value))
@@ -139,6 +144,7 @@ class IdReportController extends Controller
         return $request->validate([
             'search' => ['nullable', 'string', 'max:100'],
             'status' => ['nullable', Rule::enum(CardStatus::class)],
+            'semester' => ['nullable', Rule::in(['0', '1', '2', 'summer', 'first_semester', 'second_semester'])],
             'report_type' => ['nullable', Rule::in(['enrolled', 'printed_cards', 'released_cards', 'printed_not_released', 'without_printed', 'without_released'])],
             'date_from' => ['nullable', 'date'],
             'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
