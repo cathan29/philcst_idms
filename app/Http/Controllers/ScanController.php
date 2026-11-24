@@ -17,10 +17,14 @@ class ScanController extends Controller
 
         $code = strtoupper(trim($validated['id_number']));
         $holder = IdHolder::where('id_number', $code)->first();
+        $payloadHash = hash('sha256', $code);
+        $redactedCode = substr($payloadHash, 0, 12).'...';
 
         if (! $holder) {
             ScanLog::create([
-                'scanned_code' => $code,
+                'scanned_code' => $redactedCode,
+                'payload_hash' => $payloadHash,
+                'operator_id' => $request->user()->id,
                 'action' => 'denied',
                 'status' => 'rejected',
                 'remarks' => 'ID number is not registered.',
@@ -33,7 +37,9 @@ class ScanController extends Controller
         if ($holder->status !== 'active') {
             ScanLog::create([
                 'id_holder_id' => $holder->id,
-                'scanned_code' => $code,
+                'scanned_code' => $redactedCode,
+                'payload_hash' => $payloadHash,
+                'operator_id' => $request->user()->id,
                 'action' => 'denied',
                 'status' => 'rejected',
                 'remarks' => 'ID is inactive.',
@@ -53,7 +59,9 @@ class ScanController extends Controller
 
         ScanLog::create([
             'id_holder_id' => $holder->id,
-            'scanned_code' => $code,
+            'scanned_code' => $redactedCode,
+                'payload_hash' => $payloadHash,
+                'operator_id' => $request->user()->id,
             'action' => $action,
             'status' => 'accepted',
             'remarks' => $action === 'entry' ? 'Time in recorded.' : 'Time out recorded.',

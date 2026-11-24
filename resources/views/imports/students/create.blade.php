@@ -1,10 +1,7 @@
 @extends('layouts.app')
 @section('title', 'Import Enrollments')
 @section('content')
-@php
-    $activeTerms = $terms->where('status', 'active');
-    $historicalTerms = $terms->where('status', '!=', 'active');
-@endphp
+@php($activeTerms = $terms)
 <header class="page-header import-page-header">
     <div><p class="eyebrow">Student Management</p><h1>Import Enrollments</h1><p class="page-description">Set the academic context, then upload an official enrollment CSV.</p></div>
     <a class="import-back-link" href="{{ route('students.index') }}">Back to Registry</a>
@@ -19,9 +16,9 @@
         <section class="import-section academic-context-section" aria-labelledby="academic-context-title">
             <div class="import-section-heading"><div><p class="section-kicker">Import settings</p><h2 id="academic-context-title">Academic Context</h2><p>Choose the term and program coverage for every approved row.</p></div></div>
             <div class="academic-context-grid">
-                <label class="context-field"><span>Academic Year &amp; Semester <b>*</b></span><select name="academic_term_id" id="academicTerm" required aria-describedby="academicTermHelp"><option value="">Select academic term</option>@if($activeTerms->isNotEmpty())<optgroup label="Active terms">@foreach($activeTerms as $term)<option value="{{ $term->id }}" @selected(old('academic_term_id') == $term->id)>AY {{ str($term->academicYear->name)->replace('-', '–') }} · {{ $term->name }}</option>@endforeach</optgroup>@endif @if($historicalTerms->isNotEmpty())<optgroup label="Historical terms — authorized imports">@foreach($historicalTerms as $term)<option value="{{ $term->id }}" @selected(old('academic_term_id') == $term->id)>AY {{ str($term->academicYear->name)->replace('-', '–') }} · {{ $term->name }} (Historical)</option>@endforeach</optgroup>@endif</select><small id="academicTermHelp">Historical terms are available for authorized backfile imports.</small></label>
+                <label class="context-field"><span>Active academic year and semester <b>*</b></span><select name="academic_term_id" id="academicTerm" required aria-describedby="academicTermHelp"><option value="">Select active term</option>@foreach($activeTerms as $term)<option value="{{ $term->id }}" @selected(old('academic_term_id') == $term->id)>AY {{ $term->academicYear->name }}  -  {{ $term->name }}</option>@endforeach</select><small id="academicTermHelp">Imports are applied only to the globally active academic term.</small></label>
                 <label class="context-field"><span>Import Coverage <b>*</b></span><select name="coverage" id="coverage" required><option value="all" @selected(old('coverage', 'all') === 'all')>All Programs in CSV</option><option value="specific" @selected(old('coverage') === 'specific')>Single Program</option></select><small>All Programs uses each validated row's mapped program.</small></label>
-                <label class="context-field" id="programField" hidden><span>Program <b>*</b></span><select name="coverage_program_id" id="coverageProgram"><option value="">Select official program</option>@foreach($programs as $program)<option value="{{ $program->id }}" @selected(old('coverage_program_id') == $program->id)>{{ $program->code }} · {{ $program->name }}</option>@endforeach</select><small>Rows with a different mapped program will be rejected.</small></label>
+                <label class="context-field" id="programField" hidden><span>Program <b>*</b></span><select name="coverage_program_id" id="coverageProgram"><option value="">Select official program</option>@foreach($programs as $program)<option value="{{ $program->id }}" @selected(old('coverage_program_id') == $program->id)>{{ $program->code }}  -  {{ $program->name }}</option>@endforeach</select><small>Rows with a different mapped program will be rejected.</small></label>
             </div>
         </section>
 
@@ -29,7 +26,7 @@
             <div class="import-section-heading upload-heading"><div><p class="section-kicker">Official data file</p><h2 id="upload-csv-title">Upload CSV</h2><p>Upload official student enrollment data.</p></div><a class="template-action" href="{{ route('imports.students.template') }}">Download Template</a></div>
             <label class="csv-dropzone step-one-dropzone" for="csv" id="csvDropzone">
                 <span class="upload-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 16V4m0 0-4 4m4-4 4 4M5 15a4 4 0 0 0 1 7h12a4 4 0 0 0 1-7 7 7 0 0 0-13.5-2A4.5 4.5 0 0 0 5 15Z"/></svg></span>
-                <span class="dropzone-copy"><strong>Drop your CSV file here</strong><small>CSV only · Maximum {{ number_format($maxMegabytes) }} MB</small></span>
+                <span class="dropzone-copy"><strong>Drop your CSV file here</strong><small>CSV only  -  Maximum {{ number_format($maxMegabytes) }} MB</small></span>
                 <span class="browse-action">Browse Files</span>
                 <input id="csv" type="file" name="csv" accept=".csv,text/csv" required>
             </label>
@@ -101,7 +98,7 @@
         sync();
         if (continueButton.disabled) { event.preventDefault(); form.reportValidity(); return; }
         continueButton.disabled = true;
-        continueButton.textContent = 'Validating CSV…';
+        continueButton.textContent = 'Validating CSV...';
     });
     sync();
 })();

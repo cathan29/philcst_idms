@@ -25,6 +25,15 @@ class LoginPageTest extends TestCase
             ->assertDontSee('Sign Up');
     }
 
+    public function test_browser_responses_include_security_headers(): void
+    {
+        $this->get('/login')
+            ->assertOk()
+            ->assertHeader('X-Content-Type-Options', 'nosniff')
+            ->assertHeader('X-Frame-Options', 'SAMEORIGIN')
+            ->assertHeader('Referrer-Policy', 'strict-origin-when-cross-origin')
+            ->assertHeader('Permissions-Policy', 'camera=(self)');
+    }
     public function test_public_registration_is_not_available(): void
     {
         $this->get('/register')->assertNotFound();

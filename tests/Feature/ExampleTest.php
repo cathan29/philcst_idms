@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\IdHolder;
+use App\Models\Permission;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -30,7 +32,7 @@ class ExampleTest extends TestCase
 
     public function test_scanning_an_active_id_toggles_entry_and_exit(): void
     {
-        $user = User::factory()->create();
+        $user = $this->cardViewer();
         $holder = IdHolder::create([
             'id_number' => 'TEST-001',
             'first_name' => 'Test',
@@ -49,9 +51,20 @@ class ExampleTest extends TestCase
 
     public function test_unknown_id_is_logged_as_rejected(): void
     {
-        $user = User::factory()->create();
+        $user = $this->cardViewer();
 
         $this->actingAs($user)->post('/scan', ['id_number' => 'UNKNOWN'])->assertSessionHas('scan_error');
-        $this->assertDatabaseHas('scan_logs', ['scanned_code' => 'UNKNOWN', 'action' => 'denied', 'status' => 'rejected']);
+        $hash = hash('sha256', 'UNKNOWN');
+        $this->assertDatabaseHas('scan_logs', ['scanned_code' => substr($hash, 0, 12).'...', 'payload_hash' => $hash, 'action' => 'denied', 'status' => 'rejected']);
     }
-}
+
+    private function cardViewer(): User
+    {
+        $permission = Permission::firstOrCreate(['slug' => 'cards.view'], ['name' => 'View cards']);
+        $role = Role::create(['name' => 'Card viewer', 'slug' => 'card-viewer-'.uniqid()]);
+        $role->permissions()->attach($permission);
+        $user = User::factory()->create();
+        $user->roles()->attach($role);
+
+        return $user;
+    }}

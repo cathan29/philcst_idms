@@ -8,14 +8,17 @@ use App\Models\IdStatusHistory;
 use App\Models\ImportBatch;
 use App\Models\ScanLog;
 use App\Models\Student;
+use App\Services\ActiveAcademicTerm;
 use Carbon\CarbonPeriod;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request, ActiveAcademicTerm $activeTerms): View
     {
+        $activeTerm = $activeTerms->current();
+        $termId = $activeTerm?->id ?? 0;
         $period = $request->validate(['period' => ['nullable', 'in:week,last7,month']])['period'] ?? 'week';
         $end = now()->endOfDay();
         $start = match ($period) {
@@ -23,15 +26,16 @@ class DashboardController extends Controller
             'month' => now()->startOfMonth(),
             default => now()->startOfWeek(),
         };
-        $days = CarbonPeriod::create($start->copy()->startOfDay(), '1 day', $end->copy()->startOfDay());
+
         $trend = [];
-        foreach ($days as $day) {
+        foreach (CarbonPeriod::create($start->copy()->startOfDay(), '1 day', $end->copy()->startOfDay()) as $day) {
             $trend[$day->format('Y-m-d')] = ['label' => $day->format('D'), 'value' => 0];
         }
 
         $printedHistory = IdStatusHistory::query()
             ->where('new_status', 'printed')
             ->whereBetween('occurred_at', [$start, $end])
+            ->whereHas('card', fn ($query) => $query->where('academic_term_id', $termId))
             ->get(['occurred_at']);
         foreach ($printedHistory as $history) {
             $key = $history->occurred_at->setTimezone(config('app.timezone'))->format('Y-m-d');
@@ -40,28 +44,44 @@ class DashboardController extends Controller
             }
         }
 
-        $activity = collect();
-        $activity = $activity->merge(ImportBatch::query()->where('status', 'completed')->latest()->limit(4)->get()->map(fn ($batch) => [
-            'kind' => 'success', 'icon' => 'upload', 'label' => 'CSV import completed', 'detail' => $batch->original_filename, 'at' => $batch->created_at,
-        ]));
-        $activity = $activity->merge(IdStatusHistory::query()->with('card.student')->whereIn('new_status', ['printed', 'released'])->latest('occurred_at')->limit(6)->get()->map(fn ($history) => [
-            'kind' => $history->new_status->value === 'released' ? 'success' : 'info',
-            'icon' => $history->new_status->value === 'released' ? 'release' : 'print',
-            'label' => $history->new_status->value === 'released' ? 'ID released' : 'ID marked printed',
-            'detail' => $history->card?->student?->full_name ?? 'Student record', 'at' => $history->occurred_at,
-        ]));
-        $activity = $activity->merge(ScanLog::query()->where('status', 'rejected')->latest('scanned_at')->limit(4)->get()->map(fn ($log) => [
-            'kind' => 'warning', 'icon' => 'alert', 'label' => 'Unknown QR scan', 'detail' => 'Verification was rejected', 'at' => $log->scanned_at,
-        ]));
+        $activity = collect(ImportBatch::query()
+            ->where('status', 'completed')
+            ->where('academic_term_id', $termId)
+            ->latest()
+            ->limit(4)
+            ->get()
+            ->map(fn ($batch) => [
+                'kind' => 'success', 'icon' => 'upload', 'label' => 'CSV import completed',
+                'detail' => $batch->original_filename, 'at' => $batch->created_at,
+            ])->all());
+        $activity = $activity->merge(IdStatusHistory::query()
+            ->with('card.student')
+            ->whereIn('new_status', ['printed', 'released'])
+            ->whereHas('card', fn ($query) => $query->where('academic_term_id', $termId))
+            ->latest('occurred_at')->limit(6)->get()->map(fn ($history) => [
+                'kind' => $history->new_status->value === 'released' ? 'success' : 'info',
+                'icon' => $history->new_status->value === 'released' ? 'release' : 'print',
+                'label' => $history->new_status->value === 'released' ? 'ID released' : 'ID marked printed',
+                'detail' => $history->card?->student?->full_name ?? 'Student record', 'at' => $history->occurred_at,
+            ]));
+        $activity = $activity->merge(ScanLog::query()
+            ->where('status', 'rejected')
+            ->where(fn ($query) => $query->whereNull('id_card_id')->orWhereHas('card', fn ($card) => $card->where('academic_term_id', $termId)))
+            ->latest('scanned_at')->limit(4)->get()->map(fn ($log) => [
+                'kind' => 'warning', 'icon' => 'alert', 'label' => 'Verification rejected',
+                'detail' => 'The submitted identifier could not be verified.', 'at' => $log->scanned_at,
+            ]));
+
+        $cards = IdCard::query()->where('academic_term_id', $termId);
 
         return view('dashboard', [
             'firstName' => str((string) $request->user()->name)->before(' ')->toString() ?: $request->user()->name,
-            'totalStudents' => Student::count(),
-            'pendingPrinting' => IdCard::whereIn('status', ['pending', 'for_printing'])->count(),
-            'readyForRelease' => IdCard::where('status', 'ready_for_release')->count(),
-            'releasedToday' => IdCard::whereNotNull('released_at')->whereDate('released_at', today())->count(),
-            'trend' => array_values($trend),
-            'period' => $period,
+            'activeTerm' => $activeTerm,
+            'totalStudents' => Student::query()->whereHas('enrollments', fn ($query) => $query->where('academic_term_id', $termId))->count(),
+            'pendingPrinting' => (clone $cards)->whereIn('status', ['pending', 'for_printing'])->count(),
+            'readyForRelease' => (clone $cards)->where('status', 'ready_for_release')->count(),
+            'releasedToday' => (clone $cards)->whereHas('release', fn ($query) => $query->whereDate('released_at', today()))->count(),
+            'trend' => array_values($trend), 'period' => $period,
             'activity' => $activity->sortByDesc('at')->take(5)->values(),
             'legacyHolderCount' => IdHolder::count(),
         ]);

@@ -2,7 +2,9 @@
 
 namespace App\Services;
 
+use App\Enums\SemesterCode;
 use App\Models\AcademicTerm;
+use App\Models\AuditLog;
 use App\Models\ImportBatch;
 use App\Models\Program;
 use App\Models\Student;
@@ -16,9 +18,9 @@ use SplFileObject;
 
 class StudentCsvImportService
 {
-    public const FIELDS = ['student_number', 'first_name', 'middle_name', 'last_name', 'suffix', 'status', 'program', 'year_level', 'section', 'academic_year', 'semester'];
+    public const FIELDS = ['student_number', 'first_name', 'middle_name', 'last_name', 'suffix', 'program', 'year_level', 'academic_year', 'semester'];
 
-    private const ALIASES = ['student_number' => ['student_number', 'student number', 'student id', 'id number', 'id_number'], 'first_name' => ['first_name', 'first name', 'given name', 'given'], 'middle_name' => ['middle_name', 'middle name'], 'last_name' => ['last_name', 'last name', 'surname', 'family name', 'family'], 'suffix' => ['suffix', 'name suffix'], 'status' => ['status', 'student status', 'state'], 'program' => ['program', 'program code', 'course'], 'year_level' => ['year_level', 'year level', 'year'], 'section' => ['section', 'class section', 'block'], 'academic_year' => ['academic_year', 'academic year', 'school year'], 'semester' => ['semester', 'term']];
+    private const ALIASES = ['student_number' => ['student_number', 'student number', 'student id', 'id number', 'id_number'], 'first_name' => ['first_name', 'first name', 'given name', 'given'], 'middle_name' => ['middle_name', 'middle name'], 'last_name' => ['last_name', 'last name', 'surname', 'family name', 'family'], 'suffix' => ['suffix', 'name suffix'], 'program' => ['program', 'program code', 'course'], 'year_level' => ['year_level', 'year level', 'year'], 'academic_year' => ['academic_year', 'academic year', 'school year'], 'semester' => ['semester', 'term']];
 
     public function preview(UploadedFile $file, array $context): array
     {
@@ -81,7 +83,30 @@ class StudentCsvImportService
                 } else {
                     $updated++;
                 }
-            } $batch->update(['status' => 'completed', 'imported_rows' => $inserted, 'updated_rows' => $updated, 'unchanged_rows' => $unchanged]);
+            }
+            $batch->update([
+                'status' => 'completed',
+                'imported_rows' => $inserted,
+                'updated_rows' => $updated,
+                'unchanged_rows' => $unchanged,
+            ]);
+            AuditLog::create([
+                'user_id' => $userId,
+                'event' => 'student_import.completed',
+                'auditable_type' => ImportBatch::class,
+                'auditable_id' => $batch->id,
+                'new_values' => [
+                    'total_rows' => $batch->total_rows,
+                    'valid_rows' => $batch->valid_rows,
+                    'imported_rows' => $inserted,
+                    'updated_rows' => $updated,
+                    'unchanged_rows' => $unchanged,
+                    'duplicate_rows' => $batch->duplicate_rows,
+                    'rejected_rows' => $batch->rejected_rows,
+                    'mode' => $mode,
+                ],
+                'occurred_at' => now(),
+            ]);
 
             return $batch->refresh();
         });
@@ -90,7 +115,7 @@ class StudentCsvImportService
     private function syncEnrollment(Student $student, array $row, AcademicTerm $term): bool
     {
         $program = $this->program($row['program']);
-        $enrollment = $student->enrollments()->updateOrCreate(['academic_term_id' => $term->id], ['program_id' => $program->id, 'academic_year_id' => $term->academic_year_id, 'semester' => $term->name, 'year_level' => $row['year_level'], 'section' => filled($row['section']) ? $row['section'] : null, 'status' => 'enrolled']);
+        $enrollment = $student->enrollments()->updateOrCreate(['academic_term_id' => $term->id], ['program_id' => $program->id, 'academic_year_id' => $term->academic_year_id, 'semester' => $term->name, 'year_level' => $row['year_level'], 'status' => 'enrolled']);
 
         return $enrollment->wasRecentlyCreated || $enrollment->wasChanged();
     }
@@ -159,7 +184,7 @@ class StudentCsvImportService
             $row = [];
             foreach (self::FIELDS as $field) {
                 $row[$field] = isset($mapping[$field]) ? trim((string) ($values[$mapping[$field]] ?? '')) : '';
-            }$row['status'] = $row['status'] ?: 'active';
+            }$row['status'] = 'active';
             if ($coverageProgram && blank($row['program'])) {
                 $row['program'] = $coverageProgram->code;
             }$rowErrors = count($values) === count($header) ? [] : ['row has a different number of columns than the header'];
@@ -204,7 +229,7 @@ class StudentCsvImportService
                 if (! $enrollment) {
                     $state = 'new_enrollment';
                     $summary['new_enrollments']++;
-                } elseif ($enrollment->program_id !== $program?->id || (string) $enrollment->year_level !== (string) $row['year_level'] || (string) $enrollment->section !== (string) $row['section']) {
+                } elseif ($enrollment->program_id !== $program?->id || (string) $enrollment->year_level !== (string) $row['year_level']) {
                     $state = 'modified_enrollment';
                     $summary['modified_enrollments']++;
                 } else {
@@ -228,9 +253,9 @@ class StudentCsvImportService
 
     private function term(array $context): AcademicTerm
     {
-        $term = AcademicTerm::with('academicYear')->whereKey($context['academic_term_id'] ?? null)->first();
+        $term = AcademicTerm::with('academicYear')->whereKey($context['academic_term_id'] ?? null)->where('status', 'active')->first();
         if (! $term) {
-            throw new RuntimeException('Select a valid academic term.');
+            throw new RuntimeException('Select the active academic term.');
         }
 
         return $term;
@@ -238,7 +263,7 @@ class StudentCsvImportService
 
     private function termData(AcademicTerm $term): array
     {
-        return ['id' => $term->id, 'academic_year' => $term->academicYear->name, 'name' => $term->name, 'label' => $term->academicYear->name.' · '.$term->name];
+        return ['id' => $term->id, 'academic_year' => $term->academicYear->name, 'name' => $term->name, 'label' => $term->academicYear->name.' Ãƒâ€š -  '.$term->name];
     }
 
     private function findProgram(string $value): ?Program
@@ -253,8 +278,12 @@ class StudentCsvImportService
 
     private function sameTerm(string $value, AcademicTerm $term): bool
     {
-        $normalize = fn ($v) => str((string) $v)->lower()->replace([' ', '-', '_'], '')->toString();
+        try {
+            return SemesterCode::fromInput($value) === SemesterCode::fromInput($term->code);
+        } catch (\InvalidArgumentException) {
+            $normalize = fn ($v) => str((string) $v)->lower()->replace([' ', '-', '_'], '')->toString();
 
-        return in_array($normalize($value), [$normalize($term->name), $normalize($term->code)], true);
+            return in_array($normalize($value), [$normalize($term->name), $normalize($term->code)], true);
+        }
     }
 }

@@ -39,6 +39,11 @@ class IdProductionService
                 throw new DomainException('The selected enrollment does not belong to this student.');
             }
 
+            $activeTerm = app(ActiveAcademicTerm::class)->current();
+            if (! $activeTerm || $lockedEnrollment->academic_term_id !== $activeTerm->id) {
+                throw new DomainException('Select an enrollment from the active academic term.');
+            }
+
             if (IdCard::where('student_id', $lockedStudent->id)->whereIn('status', self::ACTIVE_PRODUCTION)->exists()) {
                 throw new DomainException('This student already has an active ID production request.');
             }

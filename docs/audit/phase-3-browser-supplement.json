@@ -1,0 +1,20 @@
+{
+  "executed_at": "2026-11-24",
+  "environment": "Disposable SQLite UAT at http://127.0.0.1:8001",
+  "runner": "Playwright headless Chrome",
+  "passed": 9,
+  "total": 9,
+  "checks": [
+    "Authorized UAT login",
+    "Fixed mobile report has no document overflow",
+    "Mobile report heading uses full-width stacked layout",
+    "Mobile report actions share one full-width row",
+    "Final report metric spans the summary row",
+    "Horizontal table guidance is visible on mobile",
+    "Wide report table is keyboard focusable",
+    "Authorized release evidence is visible after release",
+    "Stored claimant evidence is traceable to authorized staff"
+  ],
+  "physical_camera_tested": false,
+  "usb_scanner_tested": false
+}

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="theme-color" content="#F7F5FA">
-    <title>Staff Sign In · PhilCST IDMS</title>
+    <title>Staff Sign In Ã‚ -  PhilCST IDMS</title>
     <link rel="stylesheet" href="{{ asset('css/app.css') }}">
 </head>
 <body class="auth-page auth-page-minimal">
@@ -67,7 +67,7 @@
 
         <footer class="auth-footer-minimal">
             <strong>Authorized PhilCST Personnel Only</strong>
-            <span>© {{ now()->year }} Philippine College of Science and Technology</span>
+            <span>&copy; {{ now()->year }} Philippine College of Science and Technology</span>
         </footer>
     </section>
 </main>
@@ -95,7 +95,7 @@
         }
         submit.disabled = true;
         submit.classList.add('is-loading');
-        submit.querySelector('.submit-label').textContent = 'Signing In…';
+        submit.querySelector('.submit-label').textContent = 'Signing In...';
     });
 })();
 </script>

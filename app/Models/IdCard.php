@@ -6,14 +6,35 @@ use App\Enums\CardStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class IdCard extends Model
 {
-    protected $fillable = ['student_id', 'replaces_card_id', 'academic_year_id', 'academic_term_id', 'card_token', 'external_identifier', 'semester', 'issuance_type', 'replacement_sequence', 'status', 'requested_by', 'assigned_staff_id', 'requested_at', 'printing_started_at', 'printed_at', 'printed_by', 'ready_at', 'released_at', 'released_by', 'hold_previous_status', 'hold_reason', 'held_at', 'held_by', 'hold_resolved_at', 'hold_resolved_by', 'internal_notes'];
+    protected $fillable = [
+        'student_id', 'replaces_card_id', 'academic_year_id', 'academic_term_id',
+        'card_token', 'external_identifier', 'semester', 'issuance_type',
+        'replacement_sequence', 'status', 'requested_by', 'assigned_staff_id',
+        'requested_at', 'printing_started_at', 'printed_at', 'printed_by',
+        'ready_at', 'released_at', 'released_by', 'release_acknowledged_at',
+        'claimant_name', 'claimant_relationship', 'release_remarks',
+        'hold_previous_status', 'hold_reason', 'held_at', 'held_by',
+        'hold_resolved_at', 'hold_resolved_by', 'internal_notes',
+    ];
 
     protected function casts(): array
     {
-        return ['status' => CardStatus::class, 'requested_at' => 'datetime', 'printing_started_at' => 'datetime', 'printed_at' => 'datetime', 'ready_at' => 'datetime', 'released_at' => 'datetime', 'held_at' => 'datetime', 'hold_resolved_at' => 'datetime', 'revoked_at' => 'datetime'];
+        return [
+            'status' => CardStatus::class,
+            'requested_at' => 'datetime',
+            'printing_started_at' => 'datetime',
+            'printed_at' => 'datetime',
+            'ready_at' => 'datetime',
+            'released_at' => 'datetime',
+            'release_acknowledged_at' => 'datetime',
+            'held_at' => 'datetime',
+            'hold_resolved_at' => 'datetime',
+            'revoked_at' => 'datetime',
+        ];
     }
 
     public function student(): BelongsTo
@@ -44,6 +65,16 @@ class IdCard extends Model
     public function printedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'printed_by');
+    }
+
+    public function releasedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'released_by');
+    }
+
+    public function release(): HasOne
+    {
+        return $this->hasOne(IdRelease::class, 'id_card_id');
     }
 
     public function histories(): HasMany

@@ -22,7 +22,7 @@ class IdProductionTest extends TestCase
     public function test_queue_requires_permission_and_renders_empty_state(): void
     {
         $this->actingAs(User::factory()->create())->get('/production')->assertForbidden();
-        $this->actingAs($this->userWith(['cards.view']))->get('/production')->assertOk()->assertSee('No ID production requests yet');
+        $this->actingAs($this->userWith(['cards.view']))->get('/production')->assertOk()->assertSee('No production records for the active term');
     }
 
     public function test_authorized_staff_creates_pending_request_without_printing(): void
@@ -80,6 +80,47 @@ class IdProductionTest extends TestCase
         $this->assertNull($card->fresh()->printed_at);
     }
 
+    public function test_production_endpoint_cannot_bypass_release_acknowledgement(): void
+    {
+        [$card] = $this->cardAndUser();
+        $card->forceFill([
+            'status' => CardStatus::ReadyForRelease,
+            'printed_at' => now(),
+            'ready_at' => now(),
+        ])->save();
+
+        foreach ([
+            $this->userWith(['cards.view', 'cards.print']),
+            $this->userWith(['cards.view', 'cards.release']),
+        ] as $user) {
+            $this->actingAs($user)
+                ->post("/production/{$card->id}/transition", ['status' => 'released'])
+                ->assertForbidden();
+        }
+
+        $this->assertSame(CardStatus::ReadyForRelease, $card->fresh()->status);
+        $this->assertNull($card->released_at);
+    }
+    public function test_printing_staff_cannot_revoke_a_released_card(): void
+    {
+        [$card] = $this->cardAndUser();
+        $card->forceFill([
+            'status' => CardStatus::Released,
+            'printed_at' => now(),
+            'ready_at' => now(),
+            'released_at' => now(),
+        ])->save();
+
+        $this->actingAs($this->userWith(['cards.view', 'cards.print']))
+            ->post("/production/{$card->id}/transition", [
+                'status' => 'revoked',
+                'reason' => 'Administrative correction',
+            ])
+            ->assertForbidden();
+
+        $this->assertSame(CardStatus::Released, $card->fresh()->status);
+        $this->assertNull($card->revoked_at);
+    }
     public function test_on_hold_requires_reason_and_resumes_previous_state(): void
     {
         [$card,$user] = $this->cardAndUser();
@@ -104,19 +145,19 @@ class IdProductionTest extends TestCase
     {
         [$student] = $this->student();
         $user = $this->userWith(['cards.view', 'cards.print']);
-        $pending = IdCard::create(['student_id' => $student->id, 'card_token' => (string) Str::uuid(), 'status' => CardStatus::Pending]);
-        $printed = IdCard::create(['student_id' => $student->id, 'card_token' => (string) Str::uuid(), 'issuance_type' => 'replacement', 'replacement_sequence' => 1, 'status' => CardStatus::Printed]);
+        $pending = IdCard::create(['student_id' => $student->id, 'academic_year_id' => $student->enrollments->first()->academic_year_id, 'academic_term_id' => $student->enrollments->first()->academic_term_id, 'card_token' => (string) Str::uuid(), 'status' => CardStatus::Pending]);
+        $printed = IdCard::create(['student_id' => $student->id, 'academic_year_id' => $student->enrollments->first()->academic_year_id, 'academic_term_id' => $student->enrollments->first()->academic_term_id, 'card_token' => (string) Str::uuid(), 'issuance_type' => 'replacement', 'replacement_sequence' => 1, 'status' => CardStatus::Printed]);
         $this->actingAs($user)->post('/production/bulk', ['card_ids' => [$pending->id, $printed->id], 'status' => 'for_printing'])->assertSessionHas('bulk_result', fn ($r) => $r['eligible'] === 1 && $r['ineligible'] === 1);
         $this->assertSame(CardStatus::ForPrinting, $pending->fresh()->status);
         $this->assertSame(CardStatus::Printed, $printed->fresh()->status);
     }
 
-    public function test_queue_search_status_and_term_filters_are_database_driven(): void
+    public function test_queue_search_and_status_filters_are_database_driven(): void
     {
         [$student,$enrollment] = $this->student();
         $user = $this->userWith(['cards.view']);
         $card = IdCard::create(['student_id' => $student->id, 'academic_year_id' => $enrollment->academic_year_id, 'academic_term_id' => $enrollment->academic_term_id, 'card_token' => (string) Str::uuid(), 'status' => CardStatus::Pending, 'requested_at' => now()]);
-        $response = $this->actingAs($user)->get('/production?search='.$student->student_number.'&status=pending&academic_term='.$enrollment->academic_term_id);
+        $response = $this->actingAs($user)->get('/production?search='.$student->student_number.'&status=pending');
         $response->assertOk()->assertSee($student->full_name)->assertSee('Pending');
         $this->assertSame($card->id, $response->viewData('cards')->first()->id);
     }
@@ -182,6 +223,31 @@ class IdProductionTest extends TestCase
         $this->actingAs($user)->post('/production', ['student_id' => $student->id, 'student_enrollment_id' => $enrollment->id, 'issuance_type' => 'initial'])->assertForbidden();
     }
 
+    public function test_historical_term_records_are_hidden_and_immutable_from_production(): void
+    {
+        [$activeStudent] = $this->student();
+        [$historicalStudent, $historicalEnrollment] = $this->studentWithNumber('000299', 'Historical', 'Student');
+        $historicalCard = IdCard::create([
+            'student_id' => $historicalStudent->id,
+            'academic_year_id' => $historicalEnrollment->academic_year_id,
+            'academic_term_id' => $historicalEnrollment->academic_term_id,
+            'card_token' => (string) Str::uuid(),
+            'status' => CardStatus::Pending,
+        ]);
+        $user = $this->userWith(['cards.view', 'cards.manage', 'cards.print']);
+
+        $this->actingAs($user)->get('/production')
+            ->assertOk()
+            ->assertDontSee($historicalStudent->student_number);
+        $this->actingAs($user)->post('/production', [
+            'student_id' => $historicalStudent->id,
+            'student_enrollment_id' => $historicalEnrollment->id,
+            'issuance_type' => 'initial',
+        ])->assertSessionHasErrors('student_id');
+        $this->actingAs($user)->post("/production/{$historicalCard->id}/transition", ['status' => 'for_printing'])
+            ->assertSessionHasErrors('status');
+        $this->assertSame(CardStatus::Pending, $historicalCard->fresh()->status);
+    }
     private function studentWithNumber(string $number, string $firstName, string $lastName): array
     {
         $year = AcademicYear::firstOrCreate(['name' => '2027-2028']);

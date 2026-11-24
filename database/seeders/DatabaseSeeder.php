@@ -8,6 +8,7 @@ use App\Models\Role;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class DatabaseSeeder extends Seeder
 {
@@ -25,7 +26,7 @@ class DatabaseSeeder extends Seeder
         )]);
 
         $roles = [
-            'administrator' => ['students.view', 'students.manage', 'imports.manage', 'cards.view', 'cards.manage', 'cards.print', 'reports.view', 'settings.manage'],
+            'administrator' => ['students.view', 'students.manage', 'imports.manage', 'cards.view', 'cards.manage', 'cards.print', 'cards.release', 'reports.view', 'settings.manage', 'users.manage', 'audit.view'],
             'id-production-staff' => ['students.view', 'cards.view', 'cards.manage', 'cards.print'],
             'releasing-staff' => ['students.view', 'cards.view', 'cards.release'],
             'viewer-auditor' => ['students.view', 'cards.view', 'reports.view', 'audit.view'],
@@ -35,23 +36,35 @@ class DatabaseSeeder extends Seeder
             $role->permissions()->sync(collect($grants)->map(fn ($grant) => $permissions[$grant]->id));
         }
 
-        // Keep a repeatable local administrator available after migrate:fresh --seed.
+        // Keep a local administrator available after migrate:fresh --seed.
         // Override these values in .env when a different local login is preferred.
         $allPermissions = Permission::firstOrCreate(['slug' => '*'], ['name' => 'All permissions']);
         $superAdmin = Role::firstOrCreate(['slug' => 'super-administrator'], ['name' => 'Super Administrator']);
         $superAdmin->permissions()->syncWithoutDetaching([$allPermissions->id]);
 
         $adminEmail = env('IDMS_SEED_ADMIN_EMAIL', 'admin@philcst.local');
+        $adminPassword = env('IDMS_SEED_ADMIN_PASSWORD');
+        if (app()->environment('production') && blank($adminPassword)) {
+            throw new \RuntimeException('IDMS_SEED_ADMIN_PASSWORD must be set before seeding production.');
+        }
+        $generatedAdminPassword = blank($adminPassword);
+        if ($generatedAdminPassword) {
+            $adminPassword = Str::password(24);
+        }
         $admin = User::firstOrCreate(
             ['email' => $adminEmail],
             [
                 'name' => env('IDMS_SEED_ADMIN_NAME', 'PhilCST Administrator'),
-                'password' => Hash::make(env('IDMS_SEED_ADMIN_PASSWORD', 'Admin@12345PhilCST!')),
+                'password' => Hash::make($adminPassword),
                 'is_active' => true,
             ],
         );
         $admin->forceFill(['is_active' => true])->save();
         $admin->roles()->syncWithoutDetaching([$superAdmin->id]);
+
+        if (! config('idms.seed_demo_holders')) {
+            return;
+        }
 
         $holders = [
             ['id_number' => 'STU-2026-001', 'first_name' => 'Juan', 'last_name' => 'Dela Cruz', 'holder_type' => 'student', 'department' => 'Information Technology', 'email' => 'juan@example.com', 'status' => 'active'],
@@ -64,5 +77,8 @@ class DatabaseSeeder extends Seeder
         }
 
         $this->command?->info("Local administrator ready: {$adminEmail}");
+        if ($generatedAdminPassword && $admin->wasRecentlyCreated) {
+            $this->command?->warn("Generated one-time local administrator password: {$adminPassword}");
+        }
     }
 }

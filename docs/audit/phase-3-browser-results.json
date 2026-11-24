@@ -1,0 +1,309 @@
+{
+  "generated_at": "2026-11-24T09:14:24.475Z",
+  "browser": "Playwright Chromium headless",
+  "base_url": "http://127.0.0.1:8000",
+  "checks": [
+    {
+      "name": "Authorized UAT login",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "dashboard page returns 200",
+      "passed": true,
+      "detail": "200"
+    },
+    {
+      "name": "dashboard has no desktop document overflow",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "student-records page returns 200",
+      "passed": true,
+      "detail": "200"
+    },
+    {
+      "name": "student-records has no desktop document overflow",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "repro-table page returns 200",
+      "passed": true,
+      "detail": "200"
+    },
+    {
+      "name": "repro-table has no desktop document overflow",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "printed-ids page returns 200",
+      "passed": true,
+      "detail": "200"
+    },
+    {
+      "name": "printed-ids has no desktop document overflow",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "released-ids page returns 200",
+      "passed": true,
+      "detail": "200"
+    },
+    {
+      "name": "released-ids has no desktop document overflow",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "verification page returns 200",
+      "passed": true,
+      "detail": "200"
+    },
+    {
+      "name": "verification has no desktop document overflow",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "reports page returns 200",
+      "passed": true,
+      "detail": "200"
+    },
+    {
+      "name": "reports has no desktop document overflow",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "user-management page returns 200",
+      "passed": true,
+      "detail": "200"
+    },
+    {
+      "name": "user-management has no desktop document overflow",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "settings page returns 200",
+      "passed": true,
+      "detail": "200"
+    },
+    {
+      "name": "settings has no desktop document overflow",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "audit-logs page returns 200",
+      "passed": true,
+      "detail": "200"
+    },
+    {
+      "name": "audit-logs has no desktop document overflow",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "Manual student-number entry clears after verification",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "Manual entry refocuses for continuous scanning",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "Invalid image QR error state",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "Unknown QR reaches database-backed not-found state",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "Actual QR image decodes valid card and displays lifecycle status",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "Rapid duplicate QR scan is reported without automatic status change",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "Release acknowledgement persists lifecycle transition",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "Camera-unavailable error remains recoverable",
+      "passed": true,
+      "detail": "The camera could not be started. Scan an image or use manual entry."
+    },
+    {
+      "name": "dashboard has no laptop document overflow",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "dashboard has image alternative text at laptop",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "dashboard has named buttons at laptop",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "scanner has no laptop document overflow",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "scanner has image alternative text at laptop",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "scanner has named buttons at laptop",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "reports has no laptop document overflow",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "reports has image alternative text at laptop",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "reports has named buttons at laptop",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "dashboard has no tablet document overflow",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "dashboard has image alternative text at tablet",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "dashboard has named buttons at tablet",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "scanner has no tablet document overflow",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "scanner has image alternative text at tablet",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "scanner has named buttons at tablet",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "reports has no tablet document overflow",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "reports has image alternative text at tablet",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "reports has named buttons at tablet",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "dashboard has no mobile document overflow",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "dashboard has image alternative text at mobile",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "dashboard has named buttons at mobile",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "scanner has no mobile document overflow",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "scanner has image alternative text at mobile",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "scanner has named buttons at mobile",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "reports has no mobile document overflow",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "reports has image alternative text at mobile",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "reports has named buttons at mobile",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "Released report reflects scanner lifecycle change",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "Print report renders filtered PHILCST output",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "No browser page errors",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "name": "No browser console errors",
+      "passed": true,
+      "detail": ""
+    }
+  ],
+  "console_errors": [],
+  "page_errors": []
+}

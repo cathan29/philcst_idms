@@ -1,11 +1,11 @@
 @extends('layouts.app')
-@section('title', 'Create ID Request')
+@section('title', 'Add Production Record')
 @section('content')
 <header class="page-header production-header request-page-header">
     <div>
         <p class="eyebrow">ID Production</p>
-        <h1>Create ID Request</h1>
-        <p class="page-description">Create a validated production request for an existing student enrollment.</p>
+        <h1>Add Production Record</h1>
+        <p class="page-description">Add one physical card production record for an active-term student.</p>
     </div>
     <a class="btn text" href="{{ route('production.index') }}">Back to Queue</a>
 </header>
@@ -66,7 +66,7 @@
                 <select name="student_enrollment_id" id="enrollmentSelect" required>
                     <option value="">Select enrollment</option>
                 </select>
-                <small>Historical terms are available when authorized.</small>
+                <small>Only the active academic term is available.</small>
             </label>
             <label class="request-field">
                 <span>Issuance Reason <b>*</b></span>
@@ -96,23 +96,23 @@
     <section class="request-section request-progressive" id="reviewSection" aria-labelledby="review-title" hidden>
         <div class="request-section-heading">
             <span class="request-section-number">4</span>
-            <div><h2 id="review-title">Review &amp; Create</h2><p>Verify the request before adding it to the production queue.</p></div>
+            <div><h2 id="review-title">Review and Add</h2><p>Verify the card record before adding it to the Repro Table.</p></div>
         </div>
         <dl class="request-review">
-            <div><dt>Student</dt><dd id="reviewStudent">—</dd></div>
-            <div><dt>Enrollment</dt><dd id="reviewEnrollment">—</dd></div>
-            <div><dt>Reason</dt><dd id="reviewReason">—</dd></div>
-            <div><dt>Result</dt><dd>Pending production request</dd></div>
+            <div><dt>Student</dt><dd id="reviewStudent">Not selected</dd></div>
+            <div><dt>Enrollment</dt><dd id="reviewEnrollment">Not selected</dd></div>
+            <div><dt>Reason</dt><dd id="reviewReason">Not selected</dd></div>
+            <div><dt>Result</dt><dd>Pending physical card production</dd></div>
         </dl>
         <div class="request-safety-note">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 5 6v5c0 4.6 2.8 8.1 7 10 4.2-1.9 7-5.4 7-10V6l-7-3Z"/><path d="m9.5 12 1.7 1.7 3.6-4"/></svg>
-            <p>This action creates a Pending request only. It does not print, release, revoke, or replace a physical ID.</p>
+            <p>This adds a Pending production record only. It does not mark a card printed or released.</p>
         </div>
         <div class="production-actions request-actions">
             <a class="btn text" href="{{ route('production.index') }}">Cancel</a>
             <button class="btn primary" id="createRequestButton" type="submit" disabled>
                 <span class="request-submit-spinner" aria-hidden="true"></span>
-                <span>Create Pending Request</span>
+                <span>Add Pending Record</span>
             </button>
         </div>
     </section>

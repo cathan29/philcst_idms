@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\AddSecurityHeaders;
 use App\Http\Middleware\EnsureAccountIsActive;
 use App\Http\Middleware\RequirePermission;
 use Illuminate\Foundation\Application;
@@ -13,6 +14,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
+        $middleware->append(AddSecurityHeaders::class);
         $middleware->alias([
             'active' => EnsureAccountIsActive::class,
             'permission' => RequirePermission::class,

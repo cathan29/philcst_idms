@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Enums\CardStatus;
+use App\Models\AcademicTerm;
+use App\Models\AcademicYear;
 use App\Models\IdCard;
 use App\Models\Student;
 use App\Models\User;
@@ -55,8 +57,13 @@ class CardStatusTransitionTest extends TestCase
             'last_name' => 'Student',
         ]);
 
+        $year = AcademicYear::create(['name' => '2026-2027']);
+        $term = AcademicTerm::create(['academic_year_id' => $year->id, 'code' => 'first_semester', 'name' => 'First Semester', 'status' => 'active']);
+
         return IdCard::create([
             'student_id' => $student->id,
+            'academic_year_id' => $year->id,
+            'academic_term_id' => $term->id,
             'card_token' => (string) Str::uuid(),
             'status' => CardStatus::Pending,
         ]);

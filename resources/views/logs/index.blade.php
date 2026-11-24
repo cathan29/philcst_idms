@@ -15,7 +15,7 @@
             <thead><tr><th>Person</th><th>ID number</th><th>Action</th><th>Result</th><th>Remarks</th><th>Date & time</th></tr></thead>
             <tbody>
             @forelse($logs as $log)
-                <tr><td><strong>{{ $log->idHolder?->full_name ?? 'Unknown ID' }}</strong><small>{{ $log->idHolder?->holder_type ? ucfirst($log->idHolder->holder_type) : 'Unregistered' }}</small></td><td class="mono">{{ $log->scanned_code }}</td><td><span class="badge neutral">{{ ucfirst($log->action) }}</span></td><td><span class="badge {{ $log->status }}">{{ ucfirst($log->status) }}</span></td><td>{{ $log->remarks }}</td><td>{{ $log->scanned_at->format('M d, Y · h:i:s A') }}</td></tr>
+                <tr><td><strong>{{ $log->idHolder?->full_name ?? 'Unknown ID' }}</strong><small>{{ $log->idHolder?->holder_type ? ucfirst($log->idHolder->holder_type) : 'Unregistered' }}</small></td><td class="mono">{{ $log->scanned_code }}</td><td><span class="badge neutral">{{ ucfirst($log->action) }}</span></td><td><span class="badge {{ $log->status }}">{{ ucfirst($log->status) }}</span></td><td>{{ $log->remarks }}</td><td>{{ $log->scanned_at->format('M d, Y  -  h:i:s A') }}</td></tr>
             @empty<tr><td colspan="6" class="empty">No scan records match the current filters.</td></tr>@endforelse
             </tbody>
         </table>

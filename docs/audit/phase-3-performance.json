@@ -1,0 +1,139 @@
+{
+    "generated_at": "2026-11-24T17:11:43+08:00",
+    "environment": "isolated sqlite in-memory phpunit database",
+    "php_version": "8.2.12",
+    "results": {
+        "1000": {
+            "dashboard": {
+                "milliseconds": 147.28,
+                "queries": 25,
+                "memory_delta_mb": 4,
+                "peak_memory_mb": 46
+            },
+            "student_search": {
+                "milliseconds": 41.74,
+                "queries": 27,
+                "memory_delta_mb": 0,
+                "peak_memory_mb": 46
+            },
+            "production_queue": {
+                "milliseconds": 47.97,
+                "queries": 33,
+                "memory_delta_mb": 0,
+                "peak_memory_mb": 46
+            },
+            "verification": {
+                "milliseconds": 30.24,
+                "queries": 18,
+                "memory_delta_mb": 0,
+                "peak_memory_mb": 46
+            },
+            "report_page": {
+                "milliseconds": 52.08,
+                "queries": 30,
+                "memory_delta_mb": 2,
+                "peak_memory_mb": 48
+            },
+            "csv_export": {
+                "milliseconds": 154.54,
+                "queries": 21,
+                "memory_delta_mb": 2,
+                "peak_memory_mb": 50
+            },
+            "pdf_export": {
+                "milliseconds": 3574.18,
+                "queries": 18,
+                "memory_delta_mb": 54,
+                "peak_memory_mb": 104
+            }
+        },
+        "5000": {
+            "dashboard": {
+                "milliseconds": 42.8,
+                "queries": 25,
+                "memory_delta_mb": 0,
+                "peak_memory_mb": 106
+            },
+            "student_search": {
+                "milliseconds": 65.22,
+                "queries": 27,
+                "memory_delta_mb": 0,
+                "peak_memory_mb": 106
+            },
+            "production_queue": {
+                "milliseconds": 56.96,
+                "queries": 33,
+                "memory_delta_mb": 0,
+                "peak_memory_mb": 106
+            },
+            "verification": {
+                "milliseconds": 17.14,
+                "queries": 18,
+                "memory_delta_mb": 0,
+                "peak_memory_mb": 106
+            },
+            "report_page": {
+                "milliseconds": 95.36,
+                "queries": 30,
+                "memory_delta_mb": 0,
+                "peak_memory_mb": 106
+            },
+            "csv_export": {
+                "milliseconds": 747.36,
+                "queries": 66,
+                "memory_delta_mb": 0,
+                "peak_memory_mb": 106
+            },
+            "pdf_export": {
+                "milliseconds": 338.33,
+                "queries": 18,
+                "memory_delta_mb": 0,
+                "peak_memory_mb": 106
+            }
+        },
+        "10000": {
+            "dashboard": {
+                "milliseconds": 52.42,
+                "queries": 25,
+                "memory_delta_mb": 0,
+                "peak_memory_mb": 106
+            },
+            "student_search": {
+                "milliseconds": 90.09,
+                "queries": 27,
+                "memory_delta_mb": 0,
+                "peak_memory_mb": 106
+            },
+            "production_queue": {
+                "milliseconds": 72.58,
+                "queries": 33,
+                "memory_delta_mb": 0,
+                "peak_memory_mb": 106
+            },
+            "verification": {
+                "milliseconds": 17.02,
+                "queries": 18,
+                "memory_delta_mb": 0,
+                "peak_memory_mb": 106
+            },
+            "report_page": {
+                "milliseconds": 149.41,
+                "queries": 30,
+                "memory_delta_mb": 0,
+                "peak_memory_mb": 106
+            },
+            "csv_export": {
+                "milliseconds": 1843.96,
+                "queries": 120,
+                "memory_delta_mb": 0,
+                "peak_memory_mb": 106
+            },
+            "pdf_export": {
+                "milliseconds": 380.52,
+                "queries": 18,
+                "memory_delta_mb": 0,
+                "peak_memory_mb": 106
+            }
+        }
+    }
+}

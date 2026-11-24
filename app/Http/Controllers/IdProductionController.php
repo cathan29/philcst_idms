@@ -5,11 +5,11 @@ namespace App\Http\Controllers;
 use App\Enums\CardStatus;
 use App\Enums\IdIssuanceType;
 use App\Http\Requests\StoreIdProductionRequest;
-use App\Models\AcademicTerm;
 use App\Models\IdCard;
 use App\Models\Program;
 use App\Models\Student;
 use App\Models\StudentEnrollment;
+use App\Services\ActiveAcademicTerm;
 use App\Services\CardStatusTransitionService;
 use App\Services\IdProductionService;
 use DomainException;
@@ -17,25 +17,59 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class IdProductionController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request, ActiveAcademicTerm $activeTerms): View
     {
-        $f = $request->validate(['search' => ['nullable', 'string', 'max:100'], 'academic_term' => ['nullable', 'integer'], 'program' => ['nullable', 'integer'], 'year_level' => ['nullable', 'string', 'max:30'], 'status' => ['nullable', Rule::enum(CardStatus::class)], 'issuance_type' => ['nullable', Rule::enum(IdIssuanceType::class)], 'date_from' => ['nullable', 'date'], 'date_to' => ['nullable', 'date', 'after_or_equal:date_from'], 'sort' => ['nullable', 'in:requested_at,student,status,issuance_type'], 'direction' => ['nullable', 'in:asc,desc']]);
-        $q = IdCard::query()->with(['student.latestEnrollment.program', 'student.enrollments.program', 'student.enrollments.academicTerm.academicYear', 'academicTerm.academicYear', 'requester'])->when($f['search'] ?? null, fn ($q, $v) => $q->where(fn ($q) => $q->where('card_token', $v)->orWhere('external_identifier', $v)->orWhereHas('student', fn ($s) => $s->where('student_number', 'like', "%{$v}%")->orWhere('first_name', 'like', "%{$v}%")->orWhere('last_name', 'like', "%{$v}%"))))->when($f['academic_term'] ?? null, fn ($q, $v) => $q->where('academic_term_id', $v))->when($f['program'] ?? null, fn ($q, $v) => $q->whereHas('student.enrollments', fn ($e) => $e->where('program_id', $v)->when($f['academic_term'] ?? null, fn ($e, $t) => $e->where('academic_term_id', $t))))->when($f['year_level'] ?? null, fn ($q, $v) => $q->whereHas('student.enrollments', fn ($e) => $e->where('year_level', $v)))->when($f['status'] ?? null, fn ($q, $v) => $q->where('status', $v))->when($f['issuance_type'] ?? null, fn ($q, $v) => $q->where('issuance_type', $v))->when($f['date_from'] ?? null, fn ($q, $v) => $q->whereDate('requested_at', '>=', $v))->when($f['date_to'] ?? null, fn ($q, $v) => $q->whereDate('requested_at', '<=', $v));
-        $sort = $f['sort'] ?? 'requested_at';
-        $direction = $f['direction'] ?? 'desc';
+        $filters = $request->validate([
+            'search' => ['nullable', 'string', 'max:100'],
+            'program' => ['nullable', 'integer'],
+            'year_level' => ['nullable', 'string', 'max:30'],
+            'status' => ['nullable', Rule::enum(CardStatus::class)],
+            'issuance_type' => ['nullable', Rule::enum(IdIssuanceType::class)],
+            'date_from' => ['nullable', 'date'],
+            'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
+            'sort' => ['nullable', 'in:requested_at,student,status,issuance_type'],
+            'direction' => ['nullable', 'in:asc,desc'],
+        ]);
+        $termId = $activeTerms->current()?->id ?? 0;
+        $query = IdCard::query()
+            ->where('academic_term_id', $termId)
+            ->with(['student.enrollments.program', 'student.enrollments.academicTerm.academicYear', 'academicTerm.academicYear', 'requester', 'release'])
+            ->when($filters['search'] ?? null, fn ($query, $value) => $query->where(fn ($query) => $query
+                ->where('card_token', $value)
+                ->orWhere('external_identifier', $value)
+                ->orWhereHas('student', fn ($student) => $student
+                    ->where('student_number', 'like', "%{$value}%")
+                    ->orWhere('first_name', 'like', "%{$value}%")
+                    ->orWhere('last_name', 'like', "%{$value}%"))))
+            ->when($filters['program'] ?? null, fn ($query, $value) => $query->whereHas('student.enrollments', fn ($enrollment) => $enrollment
+                ->where('program_id', $value)->where('academic_term_id', $termId)))
+            ->when($filters['year_level'] ?? null, fn ($query, $value) => $query->whereHas('student.enrollments', fn ($enrollment) => $enrollment
+                ->where('year_level', $value)->where('academic_term_id', $termId)))
+            ->when($filters['status'] ?? null, fn ($query, $value) => $query->where('status', $value))
+            ->when($filters['issuance_type'] ?? null, fn ($query, $value) => $query->where('issuance_type', $value))
+            ->when($filters['date_from'] ?? null, fn ($query, $value) => $query->whereDate('requested_at', '>=', $value))
+            ->when($filters['date_to'] ?? null, fn ($query, $value) => $query->whereDate('requested_at', '<=', $value));
+
+        $sort = $filters['sort'] ?? 'requested_at';
+        $direction = $filters['direction'] ?? 'desc';
         if ($sort === 'student') {
-            $q->orderBy(Student::select('last_name')->whereColumn('students.id', 'id_cards.student_id'), $direction);
+            $query->orderBy(Student::select('last_name')->whereColumn('students.id', 'id_cards.student_id'), $direction);
         } else {
-            $q->orderBy($sort, $direction);
+            $query->orderBy($sort, $direction);
         }
 
-        return view('production.index', ['cards' => $q->paginate(25)->withQueryString(), 'filters' => $f, 'terms' => AcademicTerm::with('academicYear')->orderByDesc('id')->get(), 'programs' => Program::where('is_active', true)->orderBy('code')->get(), 'metrics' => collect(['pending', 'for_printing', 'printed', 'ready_for_release', 'on_hold'])->mapWithKeys(fn ($s) => [$s => IdCard::where('status', $s)->count()])]);
+        return view('production.index', [
+            'cards' => $query->paginate(25)->withQueryString(),
+            'filters' => $filters,
+            'programs' => Program::where('is_active', true)->orderBy('code')->get(),
+            'metrics' => collect(['pending', 'for_printing', 'printed', 'ready_for_release', 'on_hold'])
+                ->mapWithKeys(fn ($status) => [$status => IdCard::where('academic_term_id', $termId)->where('status', $status)->count()]),
+        ]);
     }
 
     public function create(Request $request): View
@@ -46,10 +80,7 @@ class IdProductionController extends Controller
             $initialStudent = $student ? $this->studentPayload($student) : null;
         }
 
-        return view('production.create', [
-            'initialStudent' => $initialStudent,
-            'issuanceTypes' => IdIssuanceType::cases(),
-        ]);
+        return view('production.create', ['initialStudent' => $initialStudent, 'issuanceTypes' => IdIssuanceType::cases()]);
     }
 
     public function searchStudents(Request $request): JsonResponse
@@ -60,8 +91,10 @@ class IdProductionController extends Controller
             $query->where('student_number', 'like', "%{$data['q']}%");
             foreach ($terms as $term) {
                 $query->orWhere(fn (Builder $part) => $part->where('student_number', 'like', "%{$term}%")
-                    ->orWhere('first_name', 'like', "%{$term}%")->orWhere('middle_name', 'like', "%{$term}%")
-                    ->orWhere('last_name', 'like', "%{$term}%")->orWhere('suffix', 'like', "%{$term}%"));
+                    ->orWhere('first_name', 'like', "%{$term}%")
+                    ->orWhere('middle_name', 'like', "%{$term}%")
+                    ->orWhere('last_name', 'like', "%{$term}%")
+                    ->orWhere('suffix', 'like', "%{$term}%"));
             }
         })->orderBy('last_name')->orderBy('first_name')->limit(20)->get()
             ->map(fn (Student $student) => $this->studentPayload($student));
@@ -85,17 +118,17 @@ class IdProductionController extends Controller
                 auditContext: ['ip_address' => $request->ip(), 'user_agent' => $request->userAgent()],
             );
 
-            return redirect()->route('production.show', $card)->with('success', 'ID production request created with Pending status.');
+            return redirect()->route('production.show', $card)->with('success', 'Card production record created with Pending status.');
         } catch (DomainException $e) {
             return back()->withInput()->withErrors(['student_id' => $e->getMessage()]);
         }
     }
 
-    public function show(IdCard $card): View
+    public function show(IdCard $card, ActiveAcademicTerm $activeTerms): View
     {
-        $card->load(['student.enrollments.program', 'student.enrollments.academicTerm.academicYear', 'academicTerm.academicYear', 'requester', 'assignedStaff', 'printedBy', 'histories.user']);
-
-        $enrollment = $card->academic_term_id ? $card->student->enrollments->firstWhere('academic_term_id', $card->academic_term_id) : $card->student->enrollments->sortByDesc('id')->first();
+        abort_unless($card->academic_term_id === $activeTerms->current()?->id, 404);
+        $card->load(['student.enrollments.program', 'student.enrollments.academicTerm.academicYear', 'academicTerm.academicYear', 'requester', 'assignedStaff', 'printedBy', 'releasedBy', 'release.releasedBy', 'histories.user']);
+        $enrollment = $card->student->enrollments->firstWhere('academic_term_id', $card->academic_term_id);
 
         return view('production.show', compact('card', 'enrollment'));
     }
@@ -104,11 +137,11 @@ class IdProductionController extends Controller
     {
         $data = $request->validate(['status' => ['required', Rule::enum(CardStatus::class)], 'reason' => ['nullable', 'string', 'max:500']]);
         $target = CardStatus::from($data['status']);
-        $permission = $target === CardStatus::Cancelled ? 'cards.manage' : 'cards.print';
+        abort_if($target === CardStatus::Released, 403, 'Use the authorized releasing workflow to record acknowledgement.');
+        $permission = in_array($target, [CardStatus::Cancelled, CardStatus::Revoked], true) ? 'cards.manage' : 'cards.print';
         abort_unless($request->user()->hasPermission($permission), 403);
         try {
             $service->transition($card, $target, $request->user(), $data['reason'] ?? null);
-
             return back()->with('success', 'Production status updated.');
         } catch (DomainException $e) {
             return back()->withErrors(['status' => $e->getMessage()]);
@@ -119,44 +152,42 @@ class IdProductionController extends Controller
     {
         $data = $request->validate(['card_ids' => ['required', 'array', 'min:1'], 'card_ids.*' => ['integer', 'exists:id_cards,id'], 'status' => ['required', 'in:for_printing,printed,ready_for_release'], 'reason' => ['nullable', 'string', 'max:500']]);
         $result = $service->bulk($data['card_ids'], CardStatus::from($data['status']), $request->user(), $data['reason'] ?? null);
-
         return back()->with('bulk_result', $result)->with('success', "Bulk operation completed: {$result['eligible']} updated, {$result['ineligible']} ineligible.");
     }
 
     private function studentQuery(): Builder
     {
-        return Student::query()->with([
-            'enrollments.program',
-            'enrollments.academicTerm.academicYear',
-            'idCards' => fn ($q) => $q->orderByDesc('requested_at')->orderByDesc('id'),
-        ]);
+        $termId = app(ActiveAcademicTerm::class)->current()?->id ?? 0;
+        return Student::query()
+            ->whereHas('enrollments', fn ($query) => $query->where('academic_term_id', $termId))
+            ->with([
+                'enrollments' => fn ($query) => $query->where('academic_term_id', $termId),
+                'enrollments.program', 'enrollments.academicTerm.academicYear',
+                'idCards' => fn ($query) => $query->where('academic_term_id', $termId)->orderByDesc('requested_at')->orderByDesc('id'),
+            ]);
     }
 
     private function studentPayload(Student $student): array
     {
         $cards = $student->idCards;
-
         return [
             'id' => $student->id,
             'student_number' => $student->student_number,
             'full_name' => $student->full_name,
             'display_name' => "{$student->student_number} - {$student->full_name}",
-            'enrollments' => $this->sortEnrollments($student->enrollments)->map(function (StudentEnrollment $enrollment): array {
-                $year = $enrollment->academicTerm?->academicYear?->name;
-                $term = $enrollment->academicTerm?->name;
-                $details = array_filter([$enrollment->program?->code, $enrollment->year_level, $enrollment->section]);
-
-                return [
-                    'id' => $enrollment->id,
-                    'academic_term_id' => $enrollment->academic_term_id,
-                    'program_id' => $enrollment->program_id,
-                    'program' => $enrollment->program?->code,
-                    'year_level' => $enrollment->year_level,
-                    'section' => $enrollment->section,
-                    'label' => implode(' | ', array_filter([$year ? "AY {$year}" : null, $term, implode(' ', $details)])),
-                ];
-            })->values(),
-            'cards' => $cards->map(fn (IdCard $card): array => [
+            'enrollments' => $student->enrollments->map(fn (StudentEnrollment $enrollment) => [
+                'id' => $enrollment->id,
+                'academic_term_id' => $enrollment->academic_term_id,
+                'program_id' => $enrollment->program_id,
+                'program' => $enrollment->program?->code,
+                'year_level' => $enrollment->year_level,
+                'label' => implode(' | ', array_filter([
+                    $enrollment->academicTerm?->academicYear?->name ? 'AY '.$enrollment->academicTerm->academicYear->name : null,
+                    $enrollment->academicTerm?->name,
+                    trim(($enrollment->program?->code ?? '').' '.($enrollment->year_level ?? '')),
+                ])),
+            ])->values(),
+            'cards' => $cards->map(fn (IdCard $card) => [
                 'id' => $card->id,
                 'status' => $card->status->value,
                 'status_label' => $card->status->label(),
@@ -167,22 +198,5 @@ class IdProductionController extends Controller
             'has_active_request' => $cards->contains(fn (IdCard $card) => in_array($card->status, IdProductionService::ACTIVE_PRODUCTION, true)),
             'has_physical_history' => $cards->contains(fn (IdCard $card) => in_array($card->status, IdProductionService::PHYSICALLY_ISSUED, true)),
         ];
-    }
-
-    private function sortEnrollments(Collection $enrollments): Collection
-    {
-        return $enrollments->sortByDesc(function (StudentEnrollment $enrollment): string {
-            $year = $enrollment->academicTerm?->academicYear;
-            $term = $enrollment->academicTerm;
-            $yearOrder = $year?->starts_on?->timestamp ?? (int) preg_replace('/\D+/', '', (string) ($year?->name ?? $year?->year ?? 0));
-            $termOrder = $term?->starts_on?->timestamp ?? match (strtolower((string) ($term?->code ?? $term?->name))) {
-                'summer', 'summer term' => 3,
-                'second', 'second semester', '2nd', '2nd semester' => 2,
-                'first', 'first semester', '1st', '1st semester' => 1,
-                default => 0,
-            };
-
-            return sprintf('%020d-%020d-%020d', $yearOrder, $termOrder, $enrollment->id);
-        });
     }
 }

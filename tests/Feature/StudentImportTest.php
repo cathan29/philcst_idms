@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Enums\CardStatus;
 use App\Models\AcademicTerm;
 use App\Models\AcademicYear;
+use App\Models\AuditLog;
 use App\Models\IdCard;
 use App\Models\Permission;
 use App\Models\Program;
@@ -53,8 +54,8 @@ class StudentImportTest extends TestCase
             ->assertSee('Academic Context')
             ->assertSee('All Programs in CSV')
             ->assertSee('Single Program')
-            ->assertSee('AY 2026–2027 · First Semester')
-            ->assertSee('Historical terms — authorized imports')
+            ->assertSee('AY 2026-2027  -  First Semester')
+            ->assertDontSee('Historical terms')
             ->assertSee('program.disabled = !single', false)
             ->assertSee('program.required = single', false)
             ->assertSee('continueButton.disabled = !(', false)
@@ -106,14 +107,14 @@ class StudentImportTest extends TestCase
         $this->assertDatabaseCount('students', 0);
     }
 
-    public function test_authorized_historical_term_can_be_previewed(): void
+    public function test_historical_term_cannot_be_previewed(): void
     {
         [$program, $year] = $this->context();
         $historical = AcademicTerm::create(['academic_year_id' => $year->id, 'code' => 'historical_second', 'name' => 'Second Semester', 'status' => 'closed']);
         $user = $this->userWith('imports.manage');
 
         $this->upload($user, $this->csv("00062,Historical,Student,{$program->code},1st Year,A"), $historical)
-            ->assertOk()->assertSee('Map Columns');
+            ->assertSessionHasErrors('academic_term_id');
         $this->assertDatabaseCount('students', 0);
     }
 
@@ -152,8 +153,8 @@ class StudentImportTest extends TestCase
         $this->assertSame(1, Student::where('student_number', '00007')->count());
         $student = Student::where('student_number', '00007')->firstOrFail();
         $this->assertSame(2, $student->enrollments()->count());
-        $this->assertDatabaseHas('student_enrollments', ['student_id' => $student->id, 'academic_term_id' => $first->id, 'section' => 'A']);
-        $this->assertDatabaseHas('student_enrollments', ['student_id' => $student->id, 'academic_term_id' => $second->id, 'section' => 'B']);
+        $this->assertDatabaseHas('student_enrollments', ['student_id' => $student->id, 'academic_term_id' => $first->id, 'section' => null]);
+        $this->assertDatabaseHas('student_enrollments', ['student_id' => $student->id, 'academic_term_id' => $second->id, 'section' => null]);
     }
 
     public function test_new_term_uses_csv_year_level_and_program_without_auto_increment(): void
@@ -167,7 +168,7 @@ class StudentImportTest extends TestCase
         $this->import($user, $this->csv("00008,Leo,Santos,{$newProgram->code},2nd Year,C"), $second);
 
         $student = Student::where('student_number', '00008')->firstOrFail();
-        $this->assertDatabaseHas('student_enrollments', ['student_id' => $student->id, 'academic_term_id' => $second->id, 'program_id' => $newProgram->id, 'year_level' => '2nd Year', 'section' => 'C']);
+        $this->assertDatabaseHas('student_enrollments', ['student_id' => $student->id, 'academic_term_id' => $second->id, 'program_id' => $newProgram->id, 'year_level' => '2nd Year', 'section' => null]);
     }
 
     public function test_repeat_import_is_idempotent_and_updates_only_term_enrollment(): void
@@ -180,7 +181,7 @@ class StudentImportTest extends TestCase
 
         $student = Student::where('student_number', '00009')->firstOrFail();
         $this->assertSame(1, $student->enrollments()->where('academic_term_id', $term->id)->count());
-        $this->assertDatabaseHas('student_enrollments', ['student_id' => $student->id, 'academic_term_id' => $term->id, 'section' => 'B']);
+        $this->assertDatabaseHas('student_enrollments', ['student_id' => $student->id, 'academic_term_id' => $term->id, 'section' => null]);
         $this->assertDatabaseHas('import_batches', ['unchanged_rows' => 1, 'status' => 'completed']);
     }
 
@@ -233,6 +234,19 @@ class StudentImportTest extends TestCase
         $this->assertSame(1, Student::where('student_number', '00020')->count());
     }
 
+    public function test_completed_import_writes_non_pii_audit_summary(): void
+    {
+        [$program, , $term] = $this->context();
+        $user = $this->userWith('imports.manage');
+
+        $this->import($user, $this->csv("00990,Audit,Student,{$program->code},1st Year,A"), $term);
+
+        $log = AuditLog::where('event', 'student_import.completed')->firstOrFail();
+        $this->assertSame($user->id, $log->user_id);
+        $this->assertSame(1, $log->new_values['imported_rows']);
+        $this->assertSame(0, $log->new_values['updated_rows']);
+        $this->assertArrayNotHasKey('student_number', $log->new_values);
+    }
     private function context(): array
     {
         $program = Program::firstOrCreate(['code' => 'BSIT'], ['name' => 'Information Technology']);

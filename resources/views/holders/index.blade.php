@@ -16,7 +16,7 @@
                     <td><strong>{{ $holder->full_name }}</strong><small>{{ $holder->email ?: 'No email provided' }}</small></td>
                     <td class="mono">{{ $holder->id_number }}</td>
                     <td>{{ ucfirst($holder->holder_type) }}</td>
-                    <td>{{ $holder->department ?: '—' }}</td>
+                    <td>{{ $holder->department ?: '-' }}</td>
                     <td><span class="badge {{ $holder->status === 'active' ? 'accepted' : 'rejected' }}">{{ ucfirst($holder->status) }}</span></td>
                     <td class="actions"><a href="{{ route('holders.edit', $holder) }}">Edit</a><form method="POST" action="{{ route('holders.destroy', $holder) }}" onsubmit="return confirm('Archive this ID holder?')">@csrf @method('DELETE')<button>Archive</button></form></td>
                 </tr>

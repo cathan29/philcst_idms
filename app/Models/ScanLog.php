@@ -10,14 +10,7 @@ class ScanLog extends Model
 {
     use HasFactory;
 
-    protected $fillable = [
-        'id_holder_id',
-        'scanned_code',
-        'action',
-        'status',
-        'remarks',
-        'scanned_at',
-    ];
+    protected $fillable = ['id_holder_id', 'student_id', 'id_card_id', 'operator_id', 'station_mode', 'scanned_code', 'payload_hash', 'action', 'status', 'result', 'remarks', 'scanned_at'];
 
     protected function casts(): array
     {
@@ -27,5 +20,20 @@ class ScanLog extends Model
     public function idHolder(): BelongsTo
     {
         return $this->belongsTo(IdHolder::class)->withTrashed();
+    }
+
+    public function student(): BelongsTo
+    {
+        return $this->belongsTo(Student::class)->withTrashed();
+    }
+
+    public function card(): BelongsTo
+    {
+        return $this->belongsTo(IdCard::class, 'id_card_id');
+    }
+
+    public function operator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'operator_id');
     }
 }
